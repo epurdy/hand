@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 import axios from 'axios'
 
-const INITIAL_SENTENCE = 'he will eat a very small red apple'
+const INITIAL_SENTENCE = 'she will eat a very small red apple'
 
 const colors = [
     "red", "green", "blue", "purple", "orange",
@@ -79,7 +79,7 @@ function Layer(props) {
         if (props.layer.heads[hidx]) {
             head_names.push(
                     <text stroke={colors[hidx]}
-                key={props.layer.heads[hidx]}
+                key={"left-" + props.layer.heads[hidx]}
                 className="Layer-headname"
                 onMouseEnter={() => props.changeInfo(
                     props.layer.heads[hidx] + "\n\n" +
@@ -93,7 +93,7 @@ function Layer(props) {
 
             head_names.push(
                     <text stroke={colors[hidx]}
-                key={props.layer.heads[hidx]}
+                key={"right-" + props.layer.heads[hidx]}
                 className="Layer-headname"
                 onMouseEnter={() => props.changeInfo(
                     props.layer.heads[hidx] + "\n\n" +
@@ -148,14 +148,11 @@ function Layer(props) {
 }
 
 class Program extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
     render() {
         return (
                 <div className="Program">
                 <textarea value={this.props.program}
+            readOnly={true}
             rows={60} cols={120}
             style={{display: this.props.editing ? "block" : "none"}}
                 />
@@ -198,12 +195,16 @@ class Input extends React.Component {
 
 function Form(props) {
     return (
-        <div>
+            <div className="Header">
+            <h1>Legible Transformers</h1>
             <Input initialValue={INITIAL_SENTENCE}
         changeSentence={props.changeSentence}
             />
             <Program program={props.program}
         editing={props.editing} />
+            <h3>by Eric Purdy</h3>
+            <h3>Have you ever wondered what goes on inside Transformer?</h3>
+            <h3><a href="#">What is this?</a></h3>
             </div>
     );
 }
@@ -261,7 +262,7 @@ class App extends React.Component {
 
         let mainpart = null;
         
-        if (this.state.error || this.state.layers[0] == undefined) {
+        if (this.state.error || this.state.layers[0] === undefined) {
             mainpart = (
                     <h1>{this.state.error}</h1>
             );
@@ -282,8 +283,7 @@ class App extends React.Component {
         }
         
         return (
-                <div className="App"
-            onKeyUp={this.handleKeyPress} tabIndex="0">
+                <div className="App">
                 <Form initialSentence={INITIAL_SENTENCE}
             changeSentence={this.changeSentence.bind(this)}
             program={this.state.program}

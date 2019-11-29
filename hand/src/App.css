@@ -4,6 +4,7 @@
 
 svg {
     border: 1px solid black;
+    margin-top: 175px;
 }
 
 .Layer {
@@ -31,6 +32,26 @@ root, pre {
 
 .Layer-headname {
     font-size: 20%;
+}
+
+.Header {
+    background-color: maroon;
+    color: white;
+    height:175px;
+    position: fixed;
+    width: 100%;
+}
+
+.Header h1, .Header h3 {
+    margin: 10px 30px;
+}
+
+.Header h3 a {
+    color:white;
+}
+
+form {
+    float:right;
 }
 
 .SentenceEntry input, .SentenceEntry {
