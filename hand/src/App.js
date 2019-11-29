@@ -155,7 +155,7 @@ class Input extends React.Component {
                 <form onSubmit={this.handleSubmit} className="SentenceEntry">
                 <label>
                 Sentence:
-                <input type="text" value={this.state.value} onChange={this.handleChange} />
+                <input type="text" className="SentenceEntry-text" value={this.state.value} onChange={this.handleChange} />
                 </label>
                 <input type="submit" value="Submit" />
                 </form>
@@ -180,8 +180,10 @@ class App extends React.Component {
         axios.post('http://localhost:8000/parse',
                    {crossDomain: true,
                     sentence: sentence})
-            .then(response => this.setState(
-                {layers: response.data.layers}))
+            .then(response => {
+                this.setState(
+                    {...response.data}
+                )})
             .catch(() => console.log('oh dear'))
     }
 
@@ -201,12 +203,15 @@ class App extends React.Component {
         }
 
         layers = layers.reverse();
+
+        let mainpart = null;
         
-        return (
-                <div className="App">
-                <Input initialValue={INITIAL_SENTENCE}
-            changeSentence={this.changeSentence.bind(this)}
-                />
+        if (this.state.error) {
+            mainpart = (
+                    <h1>{this.state.error}</h1>
+            );
+        } else {
+            mainpart = (
                 <svg className="Svg">
                 <defs>
                 <filter x="0" y="0" width="1" height="1" id="solid">
@@ -215,7 +220,16 @@ class App extends React.Component {
                 </filter>
                 </defs>
                 {layers}
-            </svg>
+                </svg>
+            );
+        }
+        
+        return (
+                <div className="App">
+                <Input initialValue={INITIAL_SENTENCE}
+            changeSentence={this.changeSentence.bind(this)}
+                />
+                {mainpart}
                 <div className="Infobox" id="Infobox">
                 {this.state.infoboxContent}
                 </div>

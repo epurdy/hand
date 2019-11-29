@@ -37,9 +37,10 @@ root, pre {
 .SentenceEntry input, .SentenceEntry {
     height: 24px;
     font-size: 20px;
+    margin-left: 30px;
 }
 
-.SentenceEntry input {
+.SentenceEntry-text {
     width:300px;
 }
 
