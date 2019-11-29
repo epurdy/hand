@@ -1006,7 +1006,10 @@ ROLES:
 
 SA0: # syntax layer 0 self-attention
     H1:
-        docstring: K Q, where K modifies Q
+
+        docstring: Modification layer. Specifically pairs of the form
+                   K Q, where K comes before Q and K modifies Q. K
+                   must be an adjective or an adverb to use this rule.
         
         params:
             normaxis: 0 # snipermode
@@ -1038,7 +1041,11 @@ SA0: # syntax layer 0 self-attention
         int: eyeadj eyeadv
 
     H1a:
-        docstring: Q K, where Q modifies K
+
+        docstring: Modification layer. Specifically pairs of the form
+                   Q K, where Q comes before K and Q modifies K. Q
+                   must be an adjective or an adverb to use this rule.
+
         params:
             normaxis: 0 # snipermode
 
