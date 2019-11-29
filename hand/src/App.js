@@ -261,13 +261,15 @@ class App extends React.Component {
 
         let mainpart = null;
         
-        if (this.state.error) {
+        if (this.state.error || this.state.layers[0] == undefined) {
             mainpart = (
                     <h1>{this.state.error}</h1>
             );
         } else {
             mainpart = (
-                <svg className="Svg">
+                    <svg className="Svg"
+                width={(2 + this.state.layers[0].tokens.length) * wordWidth}
+                height={(this.state.layers.length + 1) * levelHeight} >
                 <defs>
                 <filter x="0" y="0" width="1" height="1" id="solid">
                 <feFlood floodColor="white"/>
