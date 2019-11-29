@@ -2,11 +2,30 @@ import React from 'react';
 import './App.css';
 import axios from 'axios'
 
+const INITIAL_SENTENCE = 'he will eat a very small red apple'
+
 const colors = [
-    "red", "green", "blue", "yellow", "purple", "orange",
+    "red", "green", "blue", "purple", "orange",
+    "cyan", "magenta", "black",
+    "cornsilk",
+    "blanchedalmond",
+    "bisque",
+    "navajowhite",
+    "wheat",
+    "burlywood",
+    "tan",
+    "rosybrown",
+    "sandybrown",
+    "goldenrod",
+    "peru",
+    "chocolate",
+    "saddlebrown",
+    "sienna",
+    "brown",
+    "maroon",
 ];
 
-const levelHeight = 250;
+const levelHeight = 400;
 const wordWidth = 200;
 
 function Token(props) {
@@ -24,7 +43,6 @@ function Token(props) {
 
     return (
             <g>
-            <circle cx={props.x + 30} cy={props.y} r={4} fill="red" />
             <text filter='url(#solid)' x={props.x} y={props.y}>
             {props.surfaceForm}
         </text>
@@ -33,29 +51,16 @@ function Token(props) {
     );
 }
 
-class Connection extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {descriptionHidden: true};
-    }
-
-    render() {
-        let rectx = (this.props.x1 + this.props.x2) / 2;
-        let recty = (this.props.y1 + this.props.y2) / 2;
-        return (
+function Connection(props) {
+    return (
             <g>
-                <line {...this.props} className="Connection"
-                />
-                <rect style={{display: this.state.descriptionHidden ?
-                              'none' : ''
-                             }}
-            x={rectx} y={recty}
-            width={300} height={300}
-                fill="green"/>
-                </g>
-        );
-    }
-        
+            <line {...props} className="Connection" />
+            <circle cx={props.x1} cy={props.y1} r={4}
+        fill={props.stroke} />
+            <circle cx={props.x2} cy={props.y2} r={4}
+        fill={props.stroke} />
+            </g>
+    );
 }
 
 function Layer(props) {
@@ -77,41 +82,42 @@ function Layer(props) {
     }
 
     for (const hidx in props.layer.heads) {
-        if (props.layer.heads[hidx].name) {
+        if (props.layer.heads[hidx]) {
             head_names.push(
                     <text stroke={colors[hidx]}
-                key={props.layer.heads[hidx].name}
+                key={props.layer.heads[hidx]}
                 className="Layer-headname"
                 x={30}
-                y={-80 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
-                    {props.layer.heads[hidx].name}
+                y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
+                    {props.layer.heads[hidx]}
                 </text>
             );
         }
+    }
 
-        for (const index in props.layer.heads[hidx].connections) {
-            let connection = props.layer.heads[hidx].connections[index];
-            for (const index2 in connection) {
-                let prev = connection[index2];
-                let x1 = 230 + prev * wordWidth;
-                let x2 = 230 + index * wordWidth;
-                let y1 = 100 + (props.level - 1) * levelHeight;
-                let y2 = 100 + props.level * levelHeight;
-                connections.push(
-                        <Connection x1={x1} y1={y1} x2={x2} y2={y2}
-                    onMouseEnter={() => props.changeInfo(x1 + " " + y1)}
-                    onMouseLeave={() => props.changeInfo("")}
-                    stroke={colors[hidx]} 
-                    key={hidx + " " + index + " " + index2} />
-                );
-            }
+    for (const index in props.layer.connections) {
+        let connection = props.layer.connections[index];
+        for (const index2 in connection) {
+            let prev = connection['in'];
+            let cur = connection['out'];
+            let x1 = 230 + prev * wordWidth;
+            let x2 = 230 + cur * wordWidth;
+            let y1 = 100 + (props.level - 1) * levelHeight;
+            let y2 = 100 + props.level * levelHeight;
+            connections.push(
+                    <Connection x1={x1} y1={y1} x2={x2} y2={y2}
+                onMouseEnter={() => props.changeInfo(connection.info)}
+                onMouseLeave={() => props.changeInfo("")}
+                stroke={colors[connection.hidx]} 
+                key={connection.hidx + " " + index + " " + index2} />
+            );
         }
     }
         
     return (
             <g className="Layer">
             <text className="Layer-name" x={20}
-        y={-100 + (props.level * levelHeight)}>
+        y={-200 + (props.level * levelHeight)}>
             {props.layer.name}
         </text>
             {head_names}
@@ -167,7 +173,7 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        this.changeSentence('he ate a red apple');
+        this.changeSentence(INITIAL_SENTENCE);
     }
         
     changeSentence(sentence) {
@@ -198,7 +204,7 @@ class App extends React.Component {
         
         return (
                 <div className="App">
-                <Input initialValue="he ate a red apple"            
+                <Input initialValue={INITIAL_SENTENCE}
             changeSentence={this.changeSentence.bind(this)}
                 />
                 <svg className="Svg">

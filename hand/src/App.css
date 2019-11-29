@@ -2,7 +2,7 @@
 }
 
 svg {
-    width: 100%;
+    width: 10000px;
     height: 30000px;
     border: 1px solid black;
 }
@@ -48,5 +48,7 @@ root, pre {
     top: 0;
     right: 0;
     padding: 30px;
-    background-color: white;
+    background-color: cornsilk;
+    border:3px solid black;
+    white-space: pre-line;
 }

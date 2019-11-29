@@ -1005,7 +1005,9 @@ ROLES:
     filler: ''
 
 SA0: # syntax layer 0 self-attention
-    H1: # K Q, where K modifies Q
+    H1:
+        docstring: K Q, where K modifies Q
+        
         params:
             normaxis: 0 # snipermode
 
@@ -1086,7 +1088,8 @@ SA0: # syntax layer 0 self-attention
 
         int: eyenoun sg>sg pl>pl cognate>cognate
 
-    H2: # Q K, where K modifies Q
+    H2:
+        docstring: Q K, where K modifies Q
         params:
             normaxis: 0 # snipermode
 
@@ -1108,7 +1111,8 @@ SA0: # syntax layer 0 self-attention
 
         int: eyenoun eyeadv
 
-    H2a: # K Q, where Q modifies K
+    H2a:
+        docstring: K Q, where Q modifies K
         params:
             normaxis: 0 # snipermode
 
@@ -1135,7 +1139,8 @@ SA0: # syntax layer 0 self-attention
         int: det>licensed verb>licensed adverb>licensed
              adjective>licensed prep>licensed det>-det
 
-    Hinfinitive: # Q[to] boldly K[go]
+    Hinfinitive:
+        docstring: Q[to] boldly K[go]
         pos:
             Q: 0
             K: +1
@@ -1150,7 +1155,8 @@ SA0: # syntax layer 0 self-attention
 
         int: verb>infinitive eyeverb
 
-    Hinfinitiveanti: # K[to] boldly Q[go]
+    Hinfinitiveanti:
+        docstring: K[to] boldly Q[go]    
         params:
             future_mask: True
 
@@ -1169,8 +1175,10 @@ SA0: # syntax layer 0 self-attention
         int: to>-agentlack to>-experiencerlack to>licensed
              to>-agentposs
 
-    H20: # adverb(Q) must go after dirobject or before verb, so mark
-         # the ones before the verb(K) now
+    H20:
+        docstring: adverb(Q) must go after dirobject or before verb,
+                   so mark the ones before the verb(K) now
+         
         params:
             past_mask: True
 
@@ -1189,6 +1197,10 @@ SA0: # syntax layer 0 self-attention
         int: verb>preverb
 
 FF0: # syntax layer 0 feed-forward
+    docstring: Promote plurals and names to determiners since they
+               don't need a determiner. Mark most classes as
+               unlicensed until proven otherwise.
+
     det:
         x1: name | lastname
         x2: pl | massnoun

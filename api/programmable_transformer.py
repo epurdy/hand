@@ -7,20 +7,6 @@ from legible.layers import (SelfAttentionLayer, FeedForwardLayer,
                             MultiheadAttentionLayer,
                             WordEmbeddingLayer)
 
-def connections_from_attention(atts, words):
-    rv = [ [] for j in range(len(words)) ]
-    for att in atts:
-        idxs = (att > 0.3).nonzero()
-        idxs = zip(*idxs)
-        for i, j in idxs:
-            i = int(i)
-            j = int(j)
-            if 2 * len(words) <= i < 3 * len(words):
-                if 2 * len(words) <= j < 3 * len(words):
-                    rv[j - 2 * len(words)].append(i - 2 * len(words))
-
-    return rv
-
 
 def parse_self_attention_layer(*, obj, semes, clocks):
     sa1_heads = []
@@ -60,15 +46,18 @@ def parse_self_attention_layer(*, obj, semes, clocks):
                 query_mat=query_mat,
                 key_mat=key_mat,
                 value_mat=value_mat,
-                name=head_name))
+                name=head_name,
+                semes=semes,))
 
-    return MultiheadAttentionLayer(heads=sa1_heads)
+    return MultiheadAttentionLayer(heads=sa1_heads, semes=semes)
 
 def parse_ff_layer(*, obj, semes, clocks):
     if isinstance(obj, str):
         assert not obj.strip()
         obj = dict()
 
+    docstring = obj.pop('docstring', '')
+        
     mat1  = semes.str2mat(obj.pop('mat1', ''))
     bias1 = semes.str2vec(obj.pop('bias1', ''))
     mat2  = semes.str2mat(obj.pop('mat2', ''))
@@ -106,6 +95,8 @@ def parse_ff_layer(*, obj, semes, clocks):
 
 
     return FeedForwardLayer(
+        docstring=docstring,
+        semes=semes,
         mat1=mat1,
         bias1=bias1,
         mat2=mat2,
@@ -135,7 +126,8 @@ class ProgrammableTransformer:
         self.semes.register_variables(variables)
 
         self.lexicon = WordEmbeddingLayer(
-            {k:self.semes.str2vec(v) for k, v in
+            semes=self.semes,
+            dictionary={k:self.semes.str2vec(v) for k, v in
              self.program.pop('LEXICON').items()})
 
         roles = self.program.pop('ROLES')
@@ -207,330 +199,100 @@ class ProgrammableTransformer:
 
         assert len(self.program) == 0
 
-    def call(self, words, verbose=False, breakpoint=None):
+    def call(self, words):
         json_log = {'layers': [
             {'name': 'Input',
-             'heads': [],
              'tokens': words,
              'embeddings': ['' for token in words],
             }
         ]}
 
-        output = self.lexicon.call(words=words)
-        posns = self.clocks.call(n=len(words))
+        output = self.lexicon.call(words=words, json_log=json_log)
+        posns = self.clocks.call(n=len(words), json_log=json_log)
         neutral_posns = np.zeros_like(output)
         neutral_posns += self.semes.str2vec('+filler')
         output[:, -2 * len(self.clocks.components):] = posns
         neutral_posns[:, -2 * len(self.clocks.components):] = posns
 
-        labels = ((['filler'] * 2 * len(words)) + words +
-                  (['role'] * len(self.roles)) +
-                  (['filler'] * 2 * len(words)))
-
         output = np.concatenate([neutral_posns, neutral_posns, output,
                                  self.roles, neutral_posns,
                                  neutral_posns], axis=0)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Word Embedding',
-             'heads': [
-                 {'connections':
-                  [{'in': i,
-                    'out': i,
-                    'info': 'Word embedding of %s' % words[i],
-                  } for i in range(len(words))]}
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                            for vec in output[2 * len(words):
-                                              3 * len(words)]]
-
-            })
+        output = self.normalize.call(output, json_log=json_log)
 
         for i in range(2):
-            interpretant, attention = self.self_attention.call(
-                output,
-                semes=self.semes,
-                verbose=verbose,
-                breakpoint=breakpoint,
-                labels=labels,
-                msg='sa0')
-            output += interpretant
-            output = self.normalize.call(output)
+            output = self.self_attention.call(words=words,
+                                              vectors=output,
+                                              json_log=json_log,
+                                              real_start=2 * len(words),
+                                              real_end=3 * len(words))
+            output = self.normalize.call(output, json_log=json_log)
 
-            json_log['layers'].append(
-                {'name': 'Self Attention 0 (iteration %d)' % i,
-                 'heads': [
-                     {'connections':
-                      connections_from_attention(attention, words)}
-                 ],
-                 'tokens': words,
-                 'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
-
-        output += self.feed_forward.call(output)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Feed Forward 0',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.feed_forward.call(
+            words=words, vectors=output, json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
         
         for i in range(2):
-            interpretant, attention = self.self_attention1.call(
-                output,
-                semes=self.semes,
-                verbose=verbose,
-                breakpoint=breakpoint,
-                labels=labels,
-                msg='sa1')
-            output = output + interpretant
-            output = self.normalize.call(output)
-
-            json_log['layers'].append(
-                {'name': 'Self Attention 1 (iteration %d)' % i,
-                 'heads': [
-                     {'connections':
-                      connections_from_attention(attention, words)}
-                 ],
-                 'tokens': words,
-                 'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+            output = self.self_attention1.call(words=words,
+                                               vectors=output, json_log=json_log,
+                                              real_start=2 * len(words),
+                                              real_end=3 * len(words))
+            output = self.normalize.call(output, json_log=json_log)
             
-        output += self.feed_forward1.call(output)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Feed Forward 1',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.feed_forward1.call(words=words, vectors=output,
+                                         json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
         
-        interpretant, attention = self.self_attention2.call(output,
-                                            semes=self.semes,
-                                            verbose=verbose,
-                                                labels=labels,
-                                            breakpoint=breakpoint,
-                                            msg='sa2')
-        output = output + interpretant
-        output = self.normalize.call(output)
+        output = self.self_attention2.call(
+            words=words,
+            vectors=output, json_log=json_log,
+            real_start=2 * len(words),
+            real_end=3 * len(words))
 
-        json_log['layers'].append(
-            {'name': 'Self Attention 2',
-             'heads': [
-                 {'connections':
-                  connections_from_attention(attention, words)}
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.normalize.call(output, json_log=json_log)
         
-        output += self.feed_forward2.call(output)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Feed Forward 2',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.feed_forward2.call(words=words, vectors=output,
+                                         json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
         
-        interpretant, attention = self.self_attention3.call(output,
-                                            semes=self.semes,
-                                                labels=labels,
-                                            verbose=verbose,
-                                            breakpoint=breakpoint,
-                                            msg='sa3')
-        output = output + interpretant
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Self Attention 3',
-             'heads': [
-                 {'connections':
-                  connections_from_attention(attention, words)}
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.self_attention3.call(
+            words=words,
+            vectors=output, json_log=json_log,
+            real_start=2 * len(words),
+            real_end=3 * len(words))
+            
+        output = self.normalize.call(output, json_log=json_log)
         
-        output += self.feed_forward3.call(output)
-        output = self.normalize.call(output)
+        output = self.feed_forward3.call(words=words,
+                                         vectors=output,
+                                         json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
 
-        json_log['layers'].append(
-            {'name': 'Feed Forward 3',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.self_attention4.call(words=words,
+                                           vectors=output,
+                                           json_log=json_log,
+                                           real_start=2 * len(words),
+                                           real_end=3 * len(words))
+                                           
+        output = self.normalize.call(output, json_log=json_log)
         
-        interpretant, attention = self.self_attention4.call(output,
-                                            semes=self.semes,
-                                            verbose=verbose,
-                                                labels=labels,
-                                            breakpoint=breakpoint,
-                                            msg='sa4')
-        output += interpretant
-        output = self.normalize.call(output)
+        output = self.feed_forward4.call(words=words, vectors=output,
+                                         json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
 
-        json_log['layers'].append(
-            {'name': 'Self Attention 4',
-             'heads': [
-                 {'connections':
-                  connections_from_attention(attention, words)}
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.self_attention5.call(
+            words=words,
+            vectors=output, json_log=json_log,
+            real_start=2 * len(words),
+            real_end=3 * len(words))
+            
+        output = self.normalize.call(output, json_log=json_log)
         
-        output += self.feed_forward4.call(output)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Feed Forward 4',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
-        
-        interpretant, attention = self.self_attention5.call(output,
-                                            semes=self.semes,
-                                            verbose=verbose,
-                                                labels=labels,
-                                            breakpoint=breakpoint,
-                                            msg='sa5')
-        output += interpretant
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Self Attention 5',
-             'heads': [
-                 {'connections':
-                  connections_from_attention(attention, words)}
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
-        
-        output += self.feed_forward5.call(output)
-        output = self.normalize.call(output)
-
-        json_log['layers'].append(
-            {'name': 'Feed Forward 5',
-             'heads': [
-                 {'connections':
-                  [[j] for j in range(len(words))]
-                  }
-             ],
-             'tokens': words,
-             'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                                for vec in output[2 * len(words):
-                                                  3 * len(words)]]
-
-                })
+        output = self.feed_forward5.call(words=words, vectors=output,
+                                          json_log=json_log)
+        output = self.normalize.call(vectors=output, json_log=json_log)
         
         output = output[2*len(words):3 * len(words),
                         :len(self.og_semes)]
 
         return output, json_log
 
-    def parse(self, s, verbose=False, breakpoint=None):
-        output, json_log = self.call(s.split(), verbose=verbose,
-                                     breakpoint=breakpoint)
-        print('/' + s + '/')
-        self.semes.print_tensor2(output, 'output', labels=s.split())
-
-        strings = [self.semes.vec2str(vector) for vector in output]
-
-        return (not any('weird' in s for s in strings) and
-                any('verb' in s for s in strings))
-
-if __name__ == '__main__':
-    tf = ProgrammableTransformer(program_path='syntax.att')
-    tf.parse('he ate a red apple')
-
-    lines = []
-    for line in open('corpus/ling/cola_public/tokenized/in_domain_train.tsv'):
-        source, grammatical, og_grammatical, sentence = line.split('\t')
-        grammatical = int(grammatical)
-        grammatical = (grammatical == 1)
-        lines.append((sentence.strip(), grammatical))
-
-    lines = sorted(lines)
-    lines = sorted(lines, key=lambda thing: len(thing[0]))
-
-    lines = lines[50:]
-
-    try:
-        for i, (line, grammatical) in enumerate(lines):
-            print('Example #%d' % i)
-            print(line)
-            guess = tf.parse(line)
-            assert guess == grammatical
-    except KeyError:
-        print('index', i)
-        print('len', len(line))
-        raise
-    except AssertionError:
-        guess = tf.parse(line, verbose=True, breakpoint='')
-        print('guess', guess)
-        print('grammatical', grammatical)
-        print('index', i)
-        print('len', len(line))

@@ -38,7 +38,7 @@ def parse_sentence(sentence: Sentence):
     layers = [tokens, tokens]
     connections = [[[i] for i, t in enumerate(tokens)]]
 
-    _, json_log = transformer.call(tokens, verbose=False)
+    _, json_log = transformer.call(tokens)
     
     return json_log
 # {
