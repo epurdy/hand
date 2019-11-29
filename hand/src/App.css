@@ -1,0 +1,52 @@
+.App {
+}
+
+svg {
+    width: 100%;
+    height: 30000px;
+    border: 1px solid black;
+}
+
+.Layer {
+    font-size: 300%;
+    width: 80%;
+    text-align:center;
+}
+
+root, pre {
+    font-family: Helvetica;
+}
+
+.Connection {
+    stroke-width: 8px;
+}
+
+.Token-embedding {
+    font-size: 30%;
+}
+
+.Layer-name {
+    font-size:30%;
+    
+}
+
+.Layer-headname {
+    font-size: 20%;
+}
+
+.SentenceEntry input, .SentenceEntry {
+    height: 24px;
+    font-size: 20px;
+}
+
+.SentenceEntry input {
+    width:300px;
+}
+
+.Infobox {
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 30px;
+    background-color: white;
+}

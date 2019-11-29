@@ -1,0 +1,7 @@
+# emacs autosave
+
+*~
+
+# python
+__pycache__
+*.pyc
