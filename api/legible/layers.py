@@ -120,6 +120,9 @@ class MultiheadAttentionLayer:
              'heads': [
                  head.name for head in self.heads
              ],
+             'head_descs': [
+                 head.docstring for head in self.heads
+             ],
              'connections': connections,
              'tokens': words,
              'embeddings': [self.semes.vec2str(vec)[1:-1].split()

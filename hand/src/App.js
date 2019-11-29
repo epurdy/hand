@@ -7,13 +7,7 @@ const INITIAL_SENTENCE = 'he will eat a very small red apple'
 const colors = [
     "red", "green", "blue", "purple", "orange",
     "cyan", "magenta", "black",
-    "cornsilk",
-    "blanchedalmond",
-    "bisque",
-    "navajowhite",
-    "wheat",
     "burlywood",
-    "tan",
     "rosybrown",
     "sandybrown",
     "goldenrod",
@@ -87,7 +81,25 @@ function Layer(props) {
                     <text stroke={colors[hidx]}
                 key={props.layer.heads[hidx]}
                 className="Layer-headname"
+                onMouseEnter={() => props.changeInfo(
+                    props.layer.heads[hidx] + "\n\n" +
+                    props.layer.head_descs[hidx])}
+                onMouseLeave={() => props.changeInfo("")}
                 x={30}
+                y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
+                    {props.layer.heads[hidx]}
+                </text>
+            );
+
+            head_names.push(
+                    <text stroke={colors[hidx]}
+                key={props.layer.heads[hidx]}
+                className="Layer-headname"
+                onMouseEnter={() => props.changeInfo(
+                    props.layer.heads[hidx] + "\n\n" +
+                    props.layer.head_descs[hidx])}
+                onMouseLeave={() => props.changeInfo("")}
+                x={(tokens.length + 1) * wordWidth}
                 y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
                     {props.layer.heads[hidx]}
                 </text>
@@ -120,6 +132,10 @@ function Layer(props) {
         y={-200 + (props.level * levelHeight)}>
             {props.layer.name}
         </text>
+            <text className="Layer-name" x={(tokens.length + 1) * wordWidth}
+        y={-200 + (props.level * levelHeight)}>
+            {props.layer.name}
+        </text>
             {head_names}
             <g className="Connections">
             {connections}
@@ -129,6 +145,23 @@ function Layer(props) {
         </g>
             </g>
     );
+}
+
+class Program extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        return (
+                <div className="Program">
+                <textarea value={this.props.program}
+            rows={60} cols={120}
+            style={{display: this.props.editing ? "block" : "none"}}
+                />
+                </div>
+        );
+    }
 }
 
 class Input extends React.Component {
@@ -163,13 +196,28 @@ class Input extends React.Component {
     }
 }
 
+function Form(props) {
+    return (
+        <div>
+            <Input initialValue={INITIAL_SENTENCE}
+        changeSentence={props.changeSentence}
+            />
+            <Program program={props.program}
+        editing={props.editing} />
+            </div>
+    );
+}
+
 class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {layers: [],
+                      editing: false,
+                      program: "",
                       infoboxContent: ""};
 
         this.changeInfo = this.changeInfo.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
     componentDidMount() {
@@ -189,6 +237,13 @@ class App extends React.Component {
 
     changeInfo(info) {
         this.setState({infoboxContent: info});
+    }
+
+    handleKeyPress(e) {
+        if (e.keyCode === 69) { // e
+            this.setState({editing: !this.state.editing})
+        }
+        console.log(e.keyCode, this.state.editing);
     }
     
     render() {
@@ -225,14 +280,17 @@ class App extends React.Component {
         }
         
         return (
-                <div className="App">
-                <Input initialValue={INITIAL_SENTENCE}
+                <div className="App"
+            onKeyUp={this.handleKeyPress} tabIndex="0">
+                <Form initialSentence={INITIAL_SENTENCE}
             changeSentence={this.changeSentence.bind(this)}
-                />
+            program={this.state.program}
+            editing={this.state.editing} />
+
                 {mainpart}
                 <div className="Infobox" id="Infobox">
                 {this.state.infoboxContent}
-                </div>
+            </div>
                 </div>
         );
     }

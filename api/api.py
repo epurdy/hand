@@ -34,7 +34,7 @@ word_embeddings['.'] = ''
     
 @app.post("/parse")
 def parse_sentence(sentence: Sentence):
-    tokens = sentence.sentence.split()
+    tokens = sentence.sentence.lower().split()
     layers = [tokens, tokens]
     connections = [[[i] for i, t in enumerate(tokens)]]
 
@@ -46,5 +46,8 @@ def parse_sentence(sentence: Sentence):
         return {'error': 'Unknown error'}
 
     json_log['error'] = None
+
+    with open('syntax.att') as program:
+        json_log['program'] = program.read()
     
     return json_log
