@@ -295,7 +295,7 @@ class App extends React.Component {
         } else if (this.state.showExplanation) {
             mainpart = (
                 <div className="Explanation">
-                    <p>Transformer is a neural network architecture that is extremely effective for NLP (natural lanugage processing) tasks.
+                    <p>Transformer is a neural network architecture that is extremely effective for NLP (natural language processing) tasks.
                     The best introduction to Transformer is probably &nbsp;
                 <a href="http://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>.
                     </p>
@@ -325,6 +325,9 @@ class App extends React.Component {
         
         return (
                 <div className="App">
+
+<a href="https://github.com/epurdy/hand"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_left_darkblue_121621.png?resize=149%2C149" className="fork" alt="Fork me on GitHub" data-recalc-dims="1" />foo</a>
+            
                 <Header initialSentence={INITIAL_SENTENCE}
             changeSentence={this.changeSentence.bind(this)}
             showExplanation={this.showExplanation.bind(this)}

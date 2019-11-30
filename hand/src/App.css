@@ -45,7 +45,7 @@ root, pre {
 }
 
 .Header h1, .Header h3, .Header .link-button {
-    margin: 10px 30px;
+    margin: 10px 100px;
 }
 
 .Header h3 a {
@@ -110,11 +110,17 @@ form {
 }
 
 .negative {
-    fill: red;
+    fill: #cc0000;
     font-weight: bold;
 }
 
 .positive {
     font-weight: bold;
-    fill: green;
+    fill: #006600;
+}
+
+a img.fork {
+    z-index: 10;
+    position: fixed;
+    left:0;
 }
