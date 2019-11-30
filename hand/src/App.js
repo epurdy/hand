@@ -193,7 +193,7 @@ class Input extends React.Component {
     }
 }
 
-function Form(props) {
+function Header(props) {
     return (
             <div className="Header">
             <h1>Legible Transformers</h1>
@@ -204,7 +204,8 @@ function Form(props) {
         editing={props.editing} />
             <h3>by Eric Purdy</h3>
             <h3>Have you ever wondered what goes on inside Transformer?</h3>
-            <h3><a href="#">What is this?</a></h3>
+            <button className="link-button"
+        onClick={props.showExplanation} >What is this?</button>
             </div>
     );
 }
@@ -240,6 +241,10 @@ class App extends React.Component {
         this.setState({infoboxContent: info});
     }
 
+    showExplanation(info) {
+        this.setState({showExplanation: !this.state.showExplanation});
+    }
+    
     handleKeyPress(e) {
         if (e.keyCode === 69) { // e
             this.setState({editing: !this.state.editing})
@@ -266,6 +271,21 @@ class App extends React.Component {
             mainpart = (
                     <h1>{this.state.error}</h1>
             );
+        } else if (this.state.showExplanation) {
+            mainpart = (
+                <div className="Explanation">
+                    <p>Transformer is a neural network architecture that is extremely effective for NLP (natural lanugage processing) tasks.
+                    The best introduction to Transformer is probably &nbsp;
+                <a href="http://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>.
+                    </p>
+
+                    <p>
+                    This page shows our work on "legible" Transformers.
+                    These are Transformers whose weights have been set by
+                hand in a human-comprehensible way.
+                    </p>
+                    </div>
+            )
         } else {
             mainpart = (
                     <svg className="Svg"
@@ -284,8 +304,9 @@ class App extends React.Component {
         
         return (
                 <div className="App">
-                <Form initialSentence={INITIAL_SENTENCE}
+                <Header initialSentence={INITIAL_SENTENCE}
             changeSentence={this.changeSentence.bind(this)}
+            showExplanation={this.showExplanation.bind(this)}
             program={this.state.program}
             editing={this.state.editing} />
 

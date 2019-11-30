@@ -39,10 +39,12 @@ root, pre {
     color: white;
     height:175px;
     position: fixed;
+    top:0px;
+    left:0px;
     width: 100%;
 }
 
-.Header h1, .Header h3 {
+.Header h1, .Header h3, .Header .link-button {
     margin: 10px 30px;
 }
 
@@ -83,4 +85,21 @@ form {
 
 .Program textarea {
     font-family: 'Courier New';
+}
+
+.Explanation {
+    margin: 200px auto;
+    color: black;
+    width: 80%;
+
+}
+
+.link-button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline;
+    padding: 0;
+    color: white;
 }
