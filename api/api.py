@@ -50,10 +50,12 @@ def parse_sentence(sentence: Sentence):
     tokens = sentence.lower().split()
 
     try:
-        _, json_log = transformer.call(tokens)
+        cls, json_log = transformer.call(tokens)
+        json_log['cls'] = cls
     except KeyError as exn:
         return {'error': '404 Unknown word: %s' % exn}
-    except:
+    except Exception as exn:
+        print(exn)
         return {'error': '500 Unknown server error'}
 
     json_log['error'] = None

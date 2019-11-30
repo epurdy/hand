@@ -210,12 +210,12 @@ class Input extends React.Component {
 function Header(props) {
     return (
             <div className="Header">
-            <h1>Legible Transformers</h1>
             <Input initialValue={INITIAL_SENTENCE}
         changeSentence={props.changeSentence}
             />
             <Program program={props.program}
         editing={props.editing} />
+            <h1>Legible Transformers</h1>
             <h3>by Eric Purdy</h3>
             <h3>Have you ever wondered what goes on inside Transformer?</h3>
             <button className="link-button"

@@ -4,6 +4,7 @@ import yaml
 from legible.linalg import SemeSet
 from legible.layers import (SelfAttentionLayer, FeedForwardLayer,
                             ClockLayer, ClockNormalization2,
+                            ClassificationLayer,
                             MultiheadAttentionLayer,
                             WordEmbeddingLayer)
 
@@ -197,6 +198,9 @@ class ProgrammableTransformer:
             obj=self.program.pop('FF5'), semes=self.semes,
             clocks=self.clocks)
 
+        self.classification = ClassificationLayer(
+            semes=self.semes)
+        
         assert len(self.program) == 0
 
     def call(self, words):
@@ -294,5 +298,8 @@ class ProgrammableTransformer:
         output = output[2*len(words):3 * len(words),
                         :len(self.og_semes)]
 
+        output = self.classification.call(words=words, vectors=output,
+                                          json_log=json_log)
+        
         return output, json_log
 

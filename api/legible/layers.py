@@ -162,10 +162,10 @@ class WordEmbeddingLayer:
     def __init__(self, *, semes, dictionary):
         self.semes = semes
         self.dictionary = dictionary
-        self.weird = self.semes.str2vec('+unknownword')
+        self.unknown = self.semes.str2vec('+unknownword')
         
     def call(self, words, json_log):
-        rv = np.array([self.dictionary.get(word, self.weird)
+        rv = np.array([self.dictionary.get(word, self.unknown)
                        for word in words])
 
         json_log['layers'].append(
@@ -194,6 +194,40 @@ class WordEmbeddingLayer:
              for word in wordlist]).T
         return [wordlist[logit_slice.argmax()] for logit_slice in logits]
 
+class ClassificationLayer:
+    def __init__(self, *, semes):
+        self.semes = semes
+        
+    def call(self, *, words, vectors, json_log):
+        # max pool -> [embedding]
+        vector = np.max(vectors, axis=0)
+
+        grammatical = ('+weird' not in self.semes.vec2str(vector))
+        if grammatical:
+            token = 'grammatical'
+        else:
+            token = 'ungrammatical'
+
+        desc = """We max-pool over the sequence dimension and then 
+project down to +weird"""
+            
+        json_log['layers'].append(
+            {'name': 'Max Pool + Classify',
+             'desc': desc,
+             'connections': [
+                 {'in': i,
+                  'out': 0,
+                  'info': desc,
+                  'hidx': 0,
+                  }
+                  for i, word in enumerate(words)
+             ],
+             'tokens': [token],
+             'embeddings': [self.semes.vec2str(vector)[1:-1].split()]
+            })
+
+        return grammatical
+    
 
 class ReluLayer:
     def call(self, *, vectors):
