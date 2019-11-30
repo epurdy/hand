@@ -129,7 +129,10 @@ function Layer(props) {
     return (
             <g className="Layer">
             <text className="Layer-name" x={20}
-        y={-200 + (props.level * levelHeight)}>
+        y={-200 + (props.level * levelHeight)}
+        onMouseEnter={() => props.changeInfo(props.layer.desc)}
+        onMouseLeave={() => props.changeInfo("")}
+            >
             {props.layer.name}
         </text>
             <text className="Layer-name" x={(tokens.length + 1) * wordWidth}
@@ -169,26 +172,37 @@ class Input extends React.Component {
         this.changeSentence = props.changeSentence
         this.handleChange = this.handleChange.bind(this)
         this.handleSubmit = this.handleSubmit.bind(this)
+        this.handleRandom = this.handleRandom.bind(this)
     }
 
     handleChange(event) {
         this.setState({value: event.target.value});
     }
-
+    
     handleSubmit(event) {
         event.preventDefault();
-        this.changeSentence(this.state.value)
+        this.changeSentence(this.state.value);
+    }
+
+    handleRandom(event) {
+        event.preventDefault();
+        this.changeSentence("");
     }
     
     render() {
         return (
+            <div>
                 <form onSubmit={this.handleSubmit} className="SentenceEntry">
                 <label>
                 Sentence:
                 <input type="text" className="SentenceEntry-text" value={this.state.value} onChange={this.handleChange} />
                 </label>
                 <input type="submit" value="Submit" />
+                </form><br />
+                <form onSubmit={this.handleRandom} className="SentenceEntry">
+                <input type="submit" value="Random" />
                 </form>
+                </div>
         );
     }
 }
@@ -227,9 +241,12 @@ class App extends React.Component {
     }
         
     changeSentence(sentence) {
+        let random = !sentence;
+        
         axios.post('http://localhost:8000/parse',
                    {crossDomain: true,
-                    sentence: sentence})
+                    sentence: sentence,
+                    random: random})
             .then(response => {
                 this.setState(
                     {...response.data}
@@ -269,7 +286,7 @@ class App extends React.Component {
         
         if (this.state.error || this.state.layers[0] === undefined) {
             mainpart = (
-                    <h1>{this.state.error}</h1>
+                    <h1 className="Error">{this.state.error}</h1>
             );
         } else if (this.state.showExplanation) {
             mainpart = (
@@ -282,7 +299,7 @@ class App extends React.Component {
                     <p>
                     This page shows our work on "legible" Transformers.
                     These are Transformers whose weights have been set by
-                hand in a human-comprehensible way.
+                hand in a human-comprehensible way. 
                     </p>
                     </div>
             )

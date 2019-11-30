@@ -103,3 +103,8 @@ form {
     padding: 0;
     color: white;
 }
+
+.Error {
+    margin: 200px 30px;
+    color: black;
+}

@@ -108,19 +108,29 @@ class MultiheadAttentionLayer:
         for hidx, head in enumerate(self.heads):
             interpretant, new_connections = head.call(
                 words=words,
-                vectors=vectors, json_log=json_log, hidx=hidx,
+                vectors=vectors, json_log=json_log, hidx=hidx + 1,
                 real_start=real_start, real_end=real_end)
             interpretants.append(interpretant)
             connections.extend(new_connections)
 
         output = vectors + sum(interpretants)
 
+        connections.extend([
+            {'out': i,
+             'in': i,
+             'info': 'Residual connection',
+             'hidx': 0,
+             }
+            for i in range(len(words))
+            ])
+        
         json_log['layers'].append(
             {'name': 'Self Attention',
-             'heads': [
+             'desc': 'Self-attention layer',
+             'heads': ['Residual'] + [
                  head.name for head in self.heads
              ],
-             'head_descs': [
+             'head_descs': ['Residual connection'] + [
                  head.docstring for head in self.heads
              ],
              'connections': connections,
@@ -152,17 +162,21 @@ class WordEmbeddingLayer:
     def __init__(self, *, semes, dictionary):
         self.semes = semes
         self.dictionary = dictionary
-
+        self.weird = self.semes.str2vec('+unknownword')
+        
     def call(self, words, json_log):
-        rv = np.array([self.dictionary[word] for word in words])
+        rv = np.array([self.dictionary.get(word, self.weird)
+                       for word in words])
 
         json_log['layers'].append(
             {'name': 'Word Embedding',
+             'desc': 'Each word is mapped to a vector representation',
              'connections': [
                  {'in': i,
                   'out': i,
-                  'info': 'Word embedding of %s' % word,
-                  'hidx': 0
+                  'info': """Word embedding of "%s" is:
+%s""" % (word, self.semes.vec2str(rv[i])),
+                  'hidx': 0,
                   }
                   for i, word in enumerate(words)
              ],
@@ -179,22 +193,6 @@ class WordEmbeddingLayer:
             [vectors.dot(self.dictionary[word].T)
              for word in wordlist]).T
         return [wordlist[logit_slice.argmax()] for logit_slice in logits]
-
-
-class WordEmbeddingLayerFromFile(WordEmbeddingLayer):
-    def __init__(self, *, path, semes):
-        self.dictionary = dict()
-        for line in open(path):
-            line = line.strip()
-            if not line:
-                continue
-            pieces = line.split(maxsplit=1)
-            word = pieces[0]
-            if pieces[1:]:
-                self.dictionary[word] = semes.str2vec(pieces[1])
-            else:
-                self.dictionary[word] = np.zeros(semes.n)
-        self.dictionary['\n'] = semes.str2vec('+newline')
 
 
 class ReluLayer:
@@ -228,6 +226,7 @@ class FeedForwardLayer:
 
         json_log['layers'].append(
             {'name': 'Feed Forward',
+             'desc': self.docstring,
              'heads': [],
              'connections': [
                  {'in': i,

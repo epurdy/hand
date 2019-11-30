@@ -1,5 +1,5 @@
 SEMES:
-    weird
+    weird unknownword
 
     newline period ellipses comma qmark emark colon semicolon squote
     dquote dollar dash equalsign plus backtick tilde lparen rparen
@@ -664,6 +664,7 @@ LEXICON:
     erich: +male +name
     erik: +male +name
     erika: +female +name
+    erin: +female +name
     ernie: +male +name
     ethel: +female +name
     evan: +male +name

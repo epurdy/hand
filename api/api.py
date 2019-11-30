@@ -1,3 +1,4 @@
+import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
@@ -5,6 +6,12 @@ from starlette.middleware.cors import CORSMiddleware
 from programmable_transformer import ProgrammableTransformer
 
 transformer = ProgrammableTransformer(program_path='syntax.att')
+
+sentences = []
+with open('in_domain_train.tsv') as cola_file:
+    for line in cola_file:
+        source, grammatical, og_grammatical, sentence = line.split('\t')
+        sentences.append(sentence)
 
 app = FastAPI()
 
@@ -22,6 +29,7 @@ app.add_middleware(
 
 class Sentence(BaseModel):
     sentence: str
+    random: bool
 
 word_embeddings = dict(
     he="+pro +noun +masc +sg +3rd",
@@ -34,16 +42,19 @@ word_embeddings['.'] = ''
     
 @app.post("/parse")
 def parse_sentence(sentence: Sentence):
-    tokens = sentence.sentence.lower().split()
-    layers = [tokens, tokens]
-    connections = [[[i] for i, t in enumerate(tokens)]]
+    if sentence.random:
+        sentence = np.random.choice(sentences)
+    else:
+        sentence = sentence.sentence
+
+    tokens = sentence.lower().split()
 
     try:
         _, json_log = transformer.call(tokens)
     except KeyError as exn:
-        return {'error': 'Unknown word: %s' % exn}
+        return {'error': '404 Unknown word: %s' % exn}
     except:
-        return {'error': 'Unknown error'}
+        return {'error': '500 Unknown server error'}
 
     json_log['error'] = None
 
