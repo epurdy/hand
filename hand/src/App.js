@@ -27,9 +27,13 @@ function Token(props) {
     for (const index in props.embedding) {
         let embed = props.embedding[index];
         let y = props.y + 30 + index * 20;
+        let valence = "positive";
+        if (embed[0] === '-') {
+            valence = "negative";
+        } 
         embeds.push(
                 <text filter="url(#solid)"
-            className="Token-embedding" x={props.x} y={y}
+            className={"Token-embedding " + valence} x={props.x} y={y}
             key={index}
                 >{embed}</text>
         );

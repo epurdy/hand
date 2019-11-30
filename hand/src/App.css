@@ -26,12 +26,12 @@ root, pre {
 }
 
 .Layer-name {
-    font-size:30%;
+    font-size:40%;
     
 }
 
 .Layer-headname {
-    font-size: 20%;
+    font-size: 30%;
 }
 
 .Header {
@@ -107,4 +107,14 @@ form {
 .Error {
     margin: 200px 30px;
     color: black;
+}
+
+.negative {
+    fill: red;
+    font-weight: bold;
+}
+
+.positive {
+    font-weight: bold;
+    fill: green;
 }
