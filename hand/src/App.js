@@ -32,32 +32,32 @@ function Token(props) {
             valence = "negative";
         } 
         embeds.push(
-                <text filter="url(#solid)"
-            className={"Token-embedding " + valence} x={props.x} y={y}
-            key={index}
-                >{embed}</text>
+            <text filter="url(#solid)"
+                  className={"Token-embedding " + valence} x={props.x} y={y}
+                  key={index}
+                  >{embed}</text>
         );
     }
 
     return (
-            <g>
-            <text filter='url(#solid)' x={props.x} y={props.y}>
+        <g>
+          <text filter='url(#solid)' x={props.x} y={props.y}>
             {props.surfaceForm}
-        </text>
-            {embeds}            
+          </text>
+          {embeds}            
         </g>
     );
 }
 
 function Connection(props) {
     return (
-            <g>
-            <line {...props} className="Connection" />
-            <circle cx={props.x1} cy={props.y1} r={4}
-        fill={props.stroke} />
-            <circle cx={props.x2} cy={props.y2} r={4}
-        fill={props.stroke} />
-            </g>
+        <g>
+          <line {...props} className="Connection" />
+          <circle cx={props.x1} cy={props.y1} r={4}
+                  fill={props.stroke} />
+          <circle cx={props.x2} cy={props.y2} r={4}
+                  fill={props.stroke} />
+        </g>
     );
 }
 
@@ -82,30 +82,30 @@ function Layer(props) {
     for (const hidx in props.layer.heads) {
         if (props.layer.heads[hidx]) {
             head_names.push(
-                    <text stroke={colors[hidx]}
-                key={"left-" + props.layer.heads[hidx]}
-                className="Layer-headname"
-                onMouseEnter={() => props.changeInfo(
-                    props.layer.heads[hidx] + "\n\n" +
-                    props.layer.head_descs[hidx])}
-                onMouseLeave={() => props.changeInfo("")}
-                x={30}
-                y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
-                    {props.layer.heads[hidx]}
+                <text stroke={colors[hidx]}
+                      key={"left-" + props.layer.heads[hidx]}
+                      className="Layer-headname"
+                      onMouseEnter={() => props.changeInfo(
+                          props.layer.heads[hidx] + "\n\n" +
+                  props.layer.head_descs[hidx])}
+                  onMouseLeave={() => props.changeInfo("")}
+                  x={30}
+                  y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
+                  {props.layer.heads[hidx]}
                 </text>
             );
 
             head_names.push(
-                    <text stroke={colors[hidx]}
-                key={"right-" + props.layer.heads[hidx]}
-                className="Layer-headname"
-                onMouseEnter={() => props.changeInfo(
-                    props.layer.heads[hidx] + "\n\n" +
-                    props.layer.head_descs[hidx])}
-                onMouseLeave={() => props.changeInfo("")}
-                x={(tokens.length + 1) * wordWidth}
-                y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
-                    {props.layer.heads[hidx]}
+                <text stroke={colors[hidx]}
+                      key={"right-" + props.layer.heads[hidx]}
+                      className="Layer-headname"
+                      onMouseEnter={() => props.changeInfo(
+                          props.layer.heads[hidx] + "\n\n" +
+                  props.layer.head_descs[hidx])}
+                  onMouseLeave={() => props.changeInfo("")}
+                  x={(tokens.length + 1) * wordWidth}
+                  y={-180 + (props.level * levelHeight) + ((hidx + 1) * 3)}>
+                  {props.layer.heads[hidx]}
                 </text>
             );
         }
@@ -121,49 +121,49 @@ function Layer(props) {
             let y1 = 100 + (props.level - 1) * levelHeight;
             let y2 = 100 + props.level * levelHeight;
             connections.push(
-                    <Connection x1={x1} y1={y1} x2={x2} y2={y2}
-                onMouseEnter={() => props.changeInfo(connection.info)}
-                onMouseLeave={() => props.changeInfo("")}
-                stroke={colors[connection.hidx]} 
-                key={connection.hidx + " " + index + " " + index2} />
+                <Connection x1={x1} y1={y1} x2={x2} y2={y2}
+                            onMouseEnter={() => props.changeInfo(connection.info)}
+                  onMouseLeave={() => props.changeInfo("")}
+                  stroke={colors[connection.hidx]} 
+                  key={connection.hidx + " " + index + " " + index2} />
             );
         }
     }
-        
+    
     return (
-            <g className="Layer">
-            <text className="Layer-name" x={20}
-        y={-200 + (props.level * levelHeight)}
-        onMouseEnter={() => props.changeInfo(props.layer.desc)}
-        onMouseLeave={() => props.changeInfo("")}
+        <g className="Layer">
+          <text className="Layer-name" x={20}
+                y={-200 + (props.level * levelHeight)}
+                onMouseEnter={() => props.changeInfo(props.layer.desc)}
+            onMouseLeave={() => props.changeInfo("")}
             >
             {props.layer.name}
-        </text>
-            <text className="Layer-name" x={(tokens.length + 1) * wordWidth}
-        y={-200 + (props.level * levelHeight)}>
+          </text>
+          <text className="Layer-name" x={(tokens.length + 1) * wordWidth}
+                y={-200 + (props.level * levelHeight)}>
             {props.layer.name}
-        </text>
-            {head_names}
-            <g className="Connections">
+          </text>
+          {head_names}
+          <g className="Connections">
             {connections}
-        </g>
-            <g className="Tokens">
+          </g>
+          <g className="Tokens">
             {tokens}
+          </g>
         </g>
-            </g>
     );
 }
 
 class Program extends React.Component {
     render() {
         return (
-                <div className="Program">
-                <textarea value={this.props.program}
-            readOnly={true}
-            rows={60} cols={120}
-            style={{display: this.props.editing ? "block" : "none"}}
-                />
-                </div>
+            <div className="Program">
+              <textarea value={this.props.program}
+                        readOnly={true}
+                        rows={60} cols={120}
+                        style={{display: this.props.editing ? "block" : "none"}}
+                        />
+            </div>
         );
     }
 }
@@ -196,35 +196,35 @@ class Input extends React.Component {
     render() {
         return (
             <div>
-                <form onSubmit={this.handleSubmit} className="SentenceEntry">
+              <form onSubmit={this.handleSubmit} className="SentenceEntry">
                 <label>
-                Sentence:
-                <input type="text" className="SentenceEntry-text" value={this.state.value} onChange={this.handleChange} />
+                  Sentence:
+                  <input type="text" className="SentenceEntry-text" value={this.state.value} onChange={this.handleChange} />
                 </label>
                 <input type="submit" value="Submit" />
-                </form><br />
-                <form onSubmit={this.handleRandom} className="SentenceEntry">
+              </form><br />
+              <form onSubmit={this.handleRandom} className="SentenceEntry">
                 <input type="submit" value="Random" />
-                </form>
-                </div>
+              </form>
+            </div>
         );
     }
 }
 
 function Header(props) {
     return (
-            <div className="Header">
-            <Input initialValue={INITIAL_SENTENCE}
-        changeSentence={props.changeSentence}
-            />
-            <Program program={props.program}
-        editing={props.editing} />
-            <h1>Legible Transformers</h1>
-            <h3>by Eric Purdy</h3>
-            <h3>Have you ever wondered what goes on inside Transformer?</h3>
-            <button className="link-button"
-        onClick={props.showExplanation} >What is this?</button>
-            </div>
+        <div className="Header">
+          <Input initialValue={INITIAL_SENTENCE}
+                 changeSentence={props.changeSentence}
+                 />
+          <Program program={props.program}
+                   editing={props.editing} />
+          <h1>Legible Transformers</h1>
+          <h3>by Eric Purdy</h3>
+          <h3>Have you ever wondered what goes on inside Transformer?</h3>
+          <button className="link-button"
+                  onClick={props.showExplanation} >What is this?</button>
+        </div>
     );
 }
 
@@ -243,7 +243,7 @@ class App extends React.Component {
     componentDidMount() {
         this.changeSentence(INITIAL_SENTENCE);
     }
-        
+    
     changeSentence(sentence) {
         let random = !sentence;
         
@@ -275,12 +275,12 @@ class App extends React.Component {
     
     render() {
         let layers = [];
-    
+        
         for (const index in this.state.layers) {
             let layer = this.state.layers[index];
             layers.push(
-                    <Layer layer={layer} key={index} level={index}
-                changeInfo={this.changeInfo} />
+                <Layer layer={layer} key={index} level={index}
+                       changeInfo={this.changeInfo} />
             );
         }
 
@@ -290,55 +290,55 @@ class App extends React.Component {
         
         if (this.state.error || this.state.layers[0] === undefined) {
             mainpart = (
-                    <h1 className="Error">{this.state.error}</h1>
+                <h1 className="Error">{this.state.error}</h1>
             );
         } else if (this.state.showExplanation) {
             mainpart = (
                 <div className="Explanation">
-                    <p>Transformer is a neural network architecture that is extremely effective for NLP (natural language processing) tasks.
+                  <p>Transformer is a neural network architecture that is extremely effective for NLP (natural language processing) tasks.
                     The best introduction to Transformer is probably &nbsp;
-                <a href="http://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>.
-                    </p>
+                    <a href="http://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>.
+                  </p>
 
-                    <p>
+                  <p>
                     This page shows our work on "legible" Transformers.
                     These are Transformers whose weights have been set by
-                hand in a human-comprehensible way. 
-                    </p>
-                    </div>
+                    hand in a human-comprehensible way. 
+                  </p>
+                </div>
             )
         } else {
             mainpart = (
-                    <svg className="Svg"
-                width={(2 + this.state.layers[0].tokens.length) * wordWidth}
-                height={(this.state.layers.length + 1) * levelHeight} >
-                <defs>
-                <filter x="0" y="0" width="1" height="1" id="solid">
-                <feFlood floodColor="white"/>
-                <feComposite in="SourceGraphic" operator="over" />
-                </filter>
-                </defs>
-                {layers}
+                <svg className="Svg"
+                     width={(2 + this.state.layers[0].tokens.length) * wordWidth}
+                     height={(this.state.layers.length + 1) * levelHeight} >
+                  <defs>
+                    <filter x="0" y="0" width="1" height="1" id="solid">
+                      <feFlood floodColor="white"/>
+                      <feComposite in="SourceGraphic" operator="over" />
+                    </filter>
+                  </defs>
+                  {layers}
                 </svg>
             );
         }
         
         return (
-                <div className="App">
+            <div className="App">
 
-<a href="https://github.com/epurdy/hand"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_left_darkblue_121621.png?resize=149%2C149" className="fork" alt="Fork me on GitHub" data-recalc-dims="1" />foo</a>
-            
-                <Header initialSentence={INITIAL_SENTENCE}
-            changeSentence={this.changeSentence.bind(this)}
-            showExplanation={this.showExplanation.bind(this)}
-            program={this.state.program}
-            editing={this.state.editing} />
+              <a href="https://github.com/epurdy/hand"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_left_darkblue_121621.png?resize=149%2C149" className="fork" alt="Fork me on GitHub" data-recalc-dims="1" />foo</a>
+              
+              <Header initialSentence={INITIAL_SENTENCE}
+                      changeSentence={this.changeSentence.bind(this)}
+                      showExplanation={this.showExplanation.bind(this)}
+                      program={this.state.program}
+                      editing={this.state.editing} />
 
-                {mainpart}
-                <div className="Infobox" id="Infobox">
+              {mainpart}
+              <div className="Infobox" id="Infobox">
                 {this.state.infoboxContent}
+              </div>
             </div>
-                </div>
         );
     }
 }
