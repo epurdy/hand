@@ -37,7 +37,7 @@ SEMES:
     agentposs themeposs experiencerposs perceptposs complementposs
     goalposs benefactiveposs patientposs speechposs
 
-    at in
+    at in with
 
     may have will shall can must ought need dare
 
@@ -58,7 +58,7 @@ SEMES:
     apple bear bell bird blood boat book bread car cat chicken child
     coat cow cup day dirt dog donut door fence fool fruit horse human
     lion money pig rod salad sheep ship shirt song star steak sugar
-    tiger vegetable
+    telescope tiger vegetable
 
     up down very
 
@@ -105,10 +105,10 @@ VARIABLES:
         dog>dog donut>donut door>door fence>fence fool>fool
         fruit>fruit human>human pig>pig rod>rod salad>salad
         sheep>sheep shirt>shirt song>song star>star steak>steak
-        sugar>sugar vegetable>vegetable
+        sugar>sugar telescope>telescope tiger>tiger vegetable>vegetable
 
     eyeprep:
-        up>up down>down in>in at>at
+        up>up down>down in>in at>at with>with
 
     eyeadv:
         up>up down>down very>very
@@ -187,6 +187,7 @@ LEXICON:
     to: +to +prep
     up: +adverb +up +prep
     very: +adverb +very
+    with: +with +prep
 
     is: +be +verb +3rdsg +copula
     be: +be +verb +plain +copula
@@ -530,6 +531,8 @@ LEXICON:
     steaks: +steak +noun +pl
     tiger: +tiger +noun +sg
     tigers: +tiger +noun +pl
+    telescope: +telescope +noun +sg
+    telescopes: +telescope +noun +pl
     sugar: +sugar +noun +massnoun
     woman: +human +female +noun +sg
     women: +human +female +noun +pl
