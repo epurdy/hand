@@ -204,9 +204,9 @@ class ClassificationLayer:
 
         grammatical = ('+weird' not in self.semes.vec2str(vector))
         if grammatical:
-            token = 'grammatical'
+            token = 'GRAMMATICAL'
         else:
-            token = 'ungrammatical'
+            token = 'UNGRAMMATICAL'
 
         desc = """We max-pool over the sequence dimension and then 
 project down to +weird"""
