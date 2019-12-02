@@ -18,20 +18,26 @@ class EdAttentionLayer:
         self.name = name
         self.docstring = docstring
         self.semes = semes
+
+        self.decoder = None
+        self.encoder = None
         
     def call(self, *, words, encoder, decoder, json_log, hidx, real_start, real_end):
         # encoder is [key_seqlen, embedding]
+        self.encoder = encoder
+        
         # decoder is [query_seqlen, embedding]
+        self.decoder = decoder
 
         # [query_seqlen, embedding]
-        queries = decoder.dot(self.query_mat)
+        self.queries = decoder.dot(self.query_mat)
 
         # [key_seqlen, embedding]
-        keys = encoder.dot(self.key_mat)
-        values = encoder.dot(self.value_mat)
+        self.keys = encoder.dot(self.key_mat)
+        self.values = encoder.dot(self.value_mat)
 
         # [query_seqlen, key_seqlen]
-        dot_products = queries.dot(keys.T)
+        dot_products = self.queries.dot(self.keys.T)
         attention = dot_products * 1000
         if not self.include_self:
             attention -= 100000 * np.eye(attention.shape[0])
@@ -45,14 +51,14 @@ class EdAttentionLayer:
                 np.eye(*attention.shape[:2]))
         attention -= attention.max(axis=self.normaxis, keepdims=True)
         attention = np.exp(attention)
-        attention /= (1e-10 + attention.sum(axis=self.normaxis,
-                                            keepdims=True))
+        self.attention /= (1e-10 + attention.sum(axis=self.normaxis,
+                                                 keepdims=True))
 
         # [query_seqlen, embedding]
-        interpretants = attention.dot(values)
+        interpretants = self.attention.dot(self.values)
 
         connections = []
-        idxs = (attention >= 0.5).nonzero()
+        idxs = (self.attention >= 0.5).nonzero()
         idxs = zip(*idxs)
         for i, j in idxs:
             i = int(i)
@@ -92,7 +98,48 @@ class SelfAttentionLayer(EdAttentionLayer):
                             hidx=hidx, real_start=real_start,
                             real_end=real_end)
 
+    def backprop(self, *, dloss_dg, gradient_store):
+        # dloss_dg is [query_seqlen, embedding]
 
+        # interpretants = attention.dot(values)
+        # [query_seqlen, key_seqlen]
+        dloss_datt = dloss_dg.dot(self.values.T)
+
+        # interpretants = attention.dot(values)
+        # [key_seqlen, embedding]
+        dloss_dvalues = self.attention.T.dot(dloss_dg)
+
+        # values = encoder.dot(self.value_mat)
+        # [embedding, embedding]
+        # TODO double check that this isn't transposed
+        dloss_dvaluemat = dloss_dvalues.T.dot(self.encoder)
+        
+        # unfinished...
+        # [query_seqlen, key_seqlen]
+        dloss_ddp = None
+
+        # dot_products = self.queries.dot(self.keys.T)
+        # [query_seqlen, embedding]
+        dloss_dqueries = dloss_ddp.dot(self.keys)
+
+        # dot_products = self.queries.dot(self.keys.T)
+        # [key_seqlen, embedding]
+        dloss_dkeys = dloss_ddp.T.dot(self.queries)
+
+        # values = encoder.dot(self.value_mat)
+        # keys = encoder.dot(self.key_mat)
+        # [key_seqlen, embedding]
+        dloss_dencoder = (dloss_dvalues.dot(self.value_mat.T) +
+                          dloss_dkeys.dot(self.key_mat.T))
+
+        # queries = decoder.dot(self.query_mat)
+        dloss_ddecoder = dloss_dqueries.dot(self.query_mat.T)
+
+        return dloss_dencoder, dloss_ddecoder
+        
+    def apply_gradients(self, *, gradient_store, learning_rate):
+        pass
+    
 class MultiheadAttentionLayer:
     def __init__(self, *, heads, semes):
         self.heads = heads
@@ -102,6 +149,17 @@ class MultiheadAttentionLayer:
     def parse_layer(cls, *, obj, semes, clocks):
         pass
 
+    def backprop(self, *, dloss_dg, gradient_store):
+        # [seqlen, embedding]
+        return dloss_dg + sum(head.backprop(dloss_dg=dloss_dg,
+                                            gradient_store=gradient_store)
+                              for head in self.heads)
+
+    def apply_gradients(self, *, gradient_store, learning_rate):
+        for head in self.heads:
+            head.apply_gradients(gradient_store=gradient_store,
+                                 learning_rate=learning_rate)
+    
     def call(self, *, words, vectors, json_log, real_start, real_end):
         connections = []
         interpretants = []
@@ -163,8 +221,12 @@ class WordEmbeddingLayer:
         self.semes = semes
         self.dictionary = dictionary
         self.unknown = self.semes.str2vec('+unknownword')
+
+        self.words = None
         
     def call(self, words, json_log):
+        self.words = words
+        
         rv = np.array([self.dictionary.get(word, self.unknown)
                        for word in words])
 
@@ -187,6 +249,14 @@ class WordEmbeddingLayer:
 
         return rv
 
+    def backprop(self, *, dloss_dg, gradient_store):
+        gradient_store[id(self), 'embeddings'] = dloss_dg.copy()
+
+    def apply_gradients(self, *, gradient_store, learning_rate):
+        for word, dword in zip(self.words,
+                               gradient_store[id(self), 'embeddings']):
+            self.dictionary[word] -= learning_rate * dword
+        
     def call_transpose(self, vectors, json_log):
         wordlist = sorted(self.dictionary.keys())
         logits = np.array(
@@ -197,19 +267,25 @@ class WordEmbeddingLayer:
 class ClassificationLayer:
     def __init__(self, *, semes):
         self.semes = semes
+
+        self.grammatical = None
+        self.input = None
         
     def call(self, *, words, vectors, json_log):
-        # max pool -> [embedding]
-        vector = np.max(vectors, axis=0)
+        self.input = vectors
 
-        grammatical = ('+weird' not in self.semes.vec2str(vector))
-        if grammatical:
+        # max pool -> [embedding]
+        self.maxpool = np.max(vectors, axis=0)
+
+        self.grammatical = ('+weird' not in self.semes.vec2str(
+            self.maxpool))
+        if self.grammatical:
             token = 'GRAMMATICAL'
         else:
             token = 'UNGRAMMATICAL'
 
         desc = """We max-pool over the sequence dimension and then 
-project down to +weird"""
+        project down to +weird"""
             
         json_log['layers'].append(
             {'name': 'Max Pool + Classify',
@@ -223,12 +299,37 @@ project down to +weird"""
                   for i, word in enumerate(words)
              ],
              'tokens': [token],
-             'embeddings': [self.semes.vec2str(vector)[1:-1].split()]
+             'embeddings': [self.semes.vec2str(
+                 self.maxpool)[1:-1].split()]
             })
 
-        return grammatical
-    
+        return self.grammatical
 
+    def backprop(self, *, gradient_store):
+        assert self.grammatical is not None
+
+        if self.grammatical:
+            # grammatical -> we assume that we want to flip it to
+            # ungrammatical, so higher grammaticality means higher
+            # loss
+            dloss_dgram = 1
+        else:
+            # ungrammatical -> we assume that we want to flip it to
+            # grammatical, so higher grammaticality means lower loss
+            dloss_dgram = -1
+
+        # []
+        dloss_dweird = -dloss_dgram
+
+        # [embedding]
+        dloss_dmaxpool = dloss_dweird * self.semes.str2vec('+weird')
+
+        # [seqlen, embedding]
+        dloss_dinput = dloss_dmaxpool * (
+            self.input == self.maxpool.reshape(1, -1))
+
+        return dloss_dinput
+        
 class ReluLayer:
     def call(self, *, vectors):
         rv = vectors.copy()
@@ -245,18 +346,29 @@ class FeedForwardLayer:
         self.docstring = docstring
         self.semes = semes
 
+        # tensors used during fwd and bkwd passes
+        self.input = None
+        self.dense = None
+        self.dense_relu = None
+        self.dense_relu_dense = None
+        self.output = None
+        
     def call(self, *, words, vectors, json_log):
+        # [seqlen, embedding]
+        self.input = vectors
+        
         # vectors is [seqlen, embedding]
         # [seqlen, filter]
-        dense = vectors.dot(self.mat1) + self.bias1
+        self.dense = vectors.dot(self.mat1) + self.bias1
 
         # [seqlen, filter]
-        dense_relu = ReluLayer().call(vectors=dense)
+        self.dense_relu = ReluLayer().call(vectors=self.dense)
 
         # [seqlen, embedding]
-        dense_relu_dense = dense_relu.dot(self.mat2) + self.bias2
+        self.dense_relu_dense = self.dense_relu.dot(
+            self.mat2) + self.bias2
 
-        output = vectors + dense_relu_dense
+        self.output = vectors + self.dense_relu_dense
 
         json_log['layers'].append(
             {'name': 'Feed Forward',
@@ -271,14 +383,68 @@ class FeedForwardLayer:
              ],
              'tokens': words,
              'embeddings': [self.semes.vec2str(vec)[1:-1].split()
-                            for vec in output[2 * len(words):
-                                              3 * len(words)]]
+                            for vec in self.output[2 * len(words):
+                                                   3 * len(words)]]
 
             })
 
-        return output
+        return self.output
 
+    def backprop(self, *, dloss_dg, gradient_store):
+        # loss = f(g(h(x))), where f is later layers, g is this
+        # layer, and h is previous layers
+        #
+        # we want the gradients of this layer's weights.
+        #
+        # we also need to produce dloss/dh to pass to previous layer
 
+        # dloss_dg is [seqlen, embedding], because it's the derivative
+        # of a scalar (loss) by a [seqlen, embedding] tensor (g)
+        
+        # broadcasting add -> sum dloss_dg over broadcast axis
+        # [embedding]
+        gradient_store[id(self), 'bias2'] = dloss_dg.sum(axis=0)
+
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
+        # [filter, embedding]
+        gradient_store[id(self), 'mat2'] = self.dense_relu.T.dot(dloss_dg)
+
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
+        # [seqlen, filter]
+        dloss_ddenserelu = dloss_dg.dot(self.mat2.T)
+
+        # relu: zero out coordinates that relu cut off
+        # [seqlen, filter]
+        dloss_ddense = dloss_ddenserelu.copy()
+        dloss_ddense[self.dense < 0] = 0
+        # this makes intuitive sense to me - at zero, don't claim you
+        # can decrease the value, but do claim you can increase it
+        dloss_ddense[np.logical_and(self.dense == 0,
+                                    dloss_ddenserelu < 0)] = 0
+        
+        # broadcasting add -> sum dloss/ddense over broadcast axis
+        # [filter]
+        gradient_store[id(self), 'bias1'] = dloss_ddense.sum(axis=0)
+
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
+        # [embedding, filter]
+        gradient_store[id(self), 'mat1'] = self.input.T.dot(dloss_ddense)
+
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
+        # [seqlen, embedding]
+        dloss_dinput = dloss_ddense.dot(self.mat1.T)
+
+        # finally, account for residual connection
+        dloss_dinput = dloss_dg + dloss_dinput
+
+        return dloss_dinput
+
+    def apply_gradients(self, *, gradient_store, learning_rate):
+        self.mat1 -= learning_rate * gradient_store[id(self), 'mat1']
+        self.bias1 -= learning_rate * gradient_store[id(self), 'bias1']
+        self.mat2 -= learning_rate * gradient_store[id(self), 'mat2']
+        self.bias2 -= learning_rate * gradient_store[id(self), 'bias2']
+    
 class Normalization2:
     def __init__(self, semes):
         self.semes = semes

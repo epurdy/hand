@@ -1,8 +1,8 @@
 import React from 'react';
 import './App.css';
-import axios from 'axios'
+import axios from 'axios';
 
-const INITIAL_SENTENCE = 'she will eat a very small red apple'
+const INITIAL_SENTENCE = 'she will eat a very small red apple';
 
 const colors = [
     "red", "green", "blue", "purple", "orange",
@@ -171,12 +171,12 @@ class Program extends React.Component {
 class Input extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {value: props.initialValue}
+        this.state = {value: props.initialValue};
 
-        this.changeSentence = props.changeSentence
-        this.handleChange = this.handleChange.bind(this)
-        this.handleSubmit = this.handleSubmit.bind(this)
-        this.handleRandom = this.handleRandom.bind(this)
+        this.changeSentence = props.changeSentence;
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        this.handleRandom = this.handleRandom.bind(this);
     }
 
     handleChange(event) {
@@ -255,7 +255,7 @@ class App extends React.Component {
                 this.setState(
                     {...response.data}
                 )})
-            .catch(() => console.log('oh dear'))
+            .catch(() => console.log('oh dear'));
     }
 
     changeInfo(info) {
@@ -306,7 +306,7 @@ class App extends React.Component {
                     hand in a human-comprehensible way. 
                   </p>
                 </div>
-            )
+            );
         } else {
             mainpart = (
                 <svg className="Svg"
