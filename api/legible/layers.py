@@ -38,7 +38,8 @@ class EdAttentionLayer:
 
         # [query_seqlen, key_seqlen]
         dot_products = self.queries.dot(self.keys.T)
-        attention = dot_products * 1000
+        #attention = dot_products * 1000
+        attention = dot_products
         if not self.include_self:
             attention -= 100000 * np.eye(attention.shape[0])
         if self.future_mask:
@@ -51,9 +52,13 @@ class EdAttentionLayer:
                 np.eye(*attention.shape[:2]))
         attention -= attention.max(axis=self.normaxis, keepdims=True)
         attention = np.exp(attention)
-        self.attention /= (1e-10 + attention.sum(axis=self.normaxis,
-                                                 keepdims=True))
+        self.attention = (attention /
+                          (1e-10 + attention.sum(axis=self.normaxis,
+                                                 keepdims=True)))
 
+        # REMOVE
+        #self.attention = dot_products
+        
         # [query_seqlen, embedding]
         interpretants = self.attention.dot(self.values)
 
@@ -101,44 +106,81 @@ class SelfAttentionLayer(EdAttentionLayer):
     def backprop(self, *, dloss_dg, gradient_store):
         # dloss_dg is [query_seqlen, embedding]
 
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
         # interpretants = attention.dot(values)
         # [query_seqlen, key_seqlen]
         dloss_datt = dloss_dg.dot(self.values.T)
 
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
         # interpretants = attention.dot(values)
         # [key_seqlen, embedding]
         dloss_dvalues = self.attention.T.dot(dloss_dg)
 
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
         # values = encoder.dot(self.value_mat)
         # [embedding, embedding]
         # TODO double check that this isn't transposed
-        dloss_dvaluemat = dloss_dvalues.T.dot(self.encoder)
+        gradient_store[id(self), 'value_mat'] = self.encoder.T.dot(
+            dloss_dvalues)
         
         # unfinished...
         # [query_seqlen, key_seqlen]
-        dloss_ddp = None
+        if self.normaxis == 0:
+            assert False
+        elif self.normaxis == 1:
+            dloss_ddp_rows = []
+            for t in range(len(self.attention)):
+                att_t = self.attention[t:t+1, :].copy()
+                if not self.include_self:
+                    att_t[0, t] = 0
+                dloss_datt_t = dloss_datt[t:t+1, :]
+                #dloss_ddp_t = dloss_datt_t.dot( - att_t.T.dot(att_t))
+                dloss_ddp_t = dloss_datt_t.dot(np.diag(att_t[0]) - att_t.T.dot(att_t))
+                dloss_ddp_rows.append(dloss_ddp_t[0])
+            dloss_ddp = np.array(dloss_ddp_rows)
 
+        # dloss_ddp = dloss_datt
+        
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
         # dot_products = self.queries.dot(self.keys.T)
         # [query_seqlen, embedding]
         dloss_dqueries = dloss_ddp.dot(self.keys)
 
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
         # dot_products = self.queries.dot(self.keys.T)
         # [key_seqlen, embedding]
-        dloss_dkeys = dloss_ddp.T.dot(self.queries)
+        dloss_dkeys = self.queries.T.dot(dloss_ddp).T
+        #dloss_dkeys = dloss_ddp.T.dot(self.queries)
 
+        # matrix multiply: A = XB -> dL/dB = X.T (dL/dA)
+        # self.queries = decoder.dot(self.query_mat)
+        # [embedding, embedding]
+        gradient_store[id(self), 'query_mat'] = self.decoder.T.dot(
+            dloss_dqueries)
+
+        gradient_store[id(self), 'key_mat'] = self.encoder.T.dot(
+            dloss_dkeys)
+        
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
         # values = encoder.dot(self.value_mat)
         # keys = encoder.dot(self.key_mat)
         # [key_seqlen, embedding]
         dloss_dencoder = (dloss_dvalues.dot(self.value_mat.T) +
                           dloss_dkeys.dot(self.key_mat.T))
 
+        # matrix multiply: A = XB -> dL/dX = (dL/dA) B.T
         # queries = decoder.dot(self.query_mat)
         dloss_ddecoder = dloss_dqueries.dot(self.query_mat.T)
 
         return dloss_dencoder, dloss_ddecoder
         
     def apply_gradients(self, *, gradient_store, learning_rate):
-        pass
+        self.query_mat -= learning_rate * gradient_store[id(self),
+                                                         'query_mat']
+        self.key_mat -= learning_rate * gradient_store[id(self),
+                                                       'key_mat']
+        self.value_mat -= learning_rate * gradient_store[id(self),
+                                                         'value_mat']
     
 class MultiheadAttentionLayer:
     def __init__(self, *, heads, semes):
