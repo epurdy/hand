@@ -38,8 +38,7 @@ class EdAttentionLayer:
 
         # [query_seqlen, key_seqlen]
         dot_products = self.queries.dot(self.keys.T)
-        #attention = dot_products * 1000
-        attention = dot_products
+        attention = 1000 * dot_products.copy()
         if not self.include_self:
             attention -= 100000 * np.eye(attention.shape[0])
         if self.future_mask:
@@ -55,9 +54,6 @@ class EdAttentionLayer:
         self.attention = (attention /
                           (1e-10 + attention.sum(axis=self.normaxis,
                                                  keepdims=True)))
-
-        # REMOVE
-        #self.attention = dot_products
         
         # [query_seqlen, embedding]
         interpretants = self.attention.dot(self.values)
@@ -84,25 +80,6 @@ class EdAttentionLayer:
 
         return interpretants, connections
 
-
-class SelfAttentionLayer(EdAttentionLayer):
-    def __init__(self, *, query_mat, key_mat, value_mat, future_mask,
-                 past_mask, include_self, normaxis, docstring, name,
-                 semes):
-        super().__init__(query_mat=query_mat, key_mat=key_mat,
-                         value_mat=value_mat,
-                         include_self=include_self,
-                         future_mask=future_mask, past_mask=past_mask,
-                         normaxis=normaxis, docstring=docstring,
-                         name=name, semes=semes)
-
-    def call(self, *, words, vectors, json_log, hidx, real_start,
-             real_end):
-        return super().call(words=words, encoder=vectors,
-                            decoder=vectors, json_log=json_log,
-                            hidx=hidx, real_start=real_start,
-                            real_end=real_end)
-
     def backprop(self, *, dloss_dg, gradient_store):
         # dloss_dg is [query_seqlen, embedding]
 
@@ -123,10 +100,17 @@ class SelfAttentionLayer(EdAttentionLayer):
         gradient_store[id(self), 'value_mat'] = self.encoder.T.dot(
             dloss_dvalues)
         
-        # unfinished...
         # [query_seqlen, key_seqlen]
         if self.normaxis == 0:
-            assert False
+            dloss_ddp_cols = []
+            for t in range(self.attention.shape[1]):
+                att_t = self.attention[:, t:t+1].copy().T
+                if not self.include_self:
+                    att_t[0, t] = 0
+                dloss_datt_t = dloss_datt[:, t:t+1].T
+                dloss_ddp_t = dloss_datt_t.dot(np.diag(att_t[0]) - att_t.T.dot(att_t))
+                dloss_ddp_cols.append(dloss_ddp_t[0])
+            dloss_ddp = 1000 * np.array(dloss_ddp_cols).T
         elif self.normaxis == 1:
             dloss_ddp_rows = []
             for t in range(len(self.attention)):
@@ -137,7 +121,7 @@ class SelfAttentionLayer(EdAttentionLayer):
                 #dloss_ddp_t = dloss_datt_t.dot( - att_t.T.dot(att_t))
                 dloss_ddp_t = dloss_datt_t.dot(np.diag(att_t[0]) - att_t.T.dot(att_t))
                 dloss_ddp_rows.append(dloss_ddp_t[0])
-            dloss_ddp = np.array(dloss_ddp_rows)
+            dloss_ddp = 1000 * np.array(dloss_ddp_rows)
 
         # dloss_ddp = dloss_datt
         
@@ -181,6 +165,26 @@ class SelfAttentionLayer(EdAttentionLayer):
                                                        'key_mat']
         self.value_mat -= learning_rate * gradient_store[id(self),
                                                          'value_mat']
+
+    
+
+class SelfAttentionLayer(EdAttentionLayer):
+    def __init__(self, *, query_mat, key_mat, value_mat, future_mask,
+                 past_mask, include_self, normaxis, docstring, name,
+                 semes):
+        super().__init__(query_mat=query_mat, key_mat=key_mat,
+                         value_mat=value_mat,
+                         include_self=include_self,
+                         future_mask=future_mask, past_mask=past_mask,
+                         normaxis=normaxis, docstring=docstring,
+                         name=name, semes=semes)
+
+    def call(self, *, words, vectors, json_log, hidx, real_start,
+             real_end):
+        return super().call(words=words, encoder=vectors,
+                            decoder=vectors, json_log=json_log,
+                            hidx=hidx, real_start=real_start,
+                            real_end=real_end)
     
 class MultiheadAttentionLayer:
     def __init__(self, *, heads, semes):
