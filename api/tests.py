@@ -1,8 +1,8 @@
 import numpy as np
 
-from linalg import SemeSet
-from layers import FeedForwardLayer, SelfAttentionLayer
-
+from legible.linalg import SemeSet
+from legible.layers import FeedForwardLayer, SelfAttentionLayer
+from programmable_transformer import ProgrammableTransformer
 
 def test_backprop_feed_forward():
     filter_size = 256
@@ -363,13 +363,13 @@ def test_backprop_2layer():
             gradient_store = {}
             grad_ff2 = learner_ff2.backprop(dloss_dg=grad,
                                           gradient_store=gradient_store)
-            denc, ddec = learner_sa2.backprop(
+            grad_sa2 = learner_sa2.backprop(
                 dloss_dg=grad_ff2,
                 gradient_store=gradient_store)
-            grad_ff1 = learner_ff1.backprop(dloss_dg=(denc + ddec),
-                                          gradient_store=gradient_store)
-            _ = learner_sa1.backprop(dloss_dg=grad_ff1,
-                                     gradient_store=gradient_store)
+            grad_ff1 = learner_ff1.backprop(dloss_dg=grad_sa2,
+                                            gradient_store=gradient_store)
+            grad_sa1 = learner_sa1.backprop(dloss_dg=grad_ff1,
+                                            gradient_store=gradient_store)
             
             gradient_stores.append(gradient_store)
 
@@ -386,18 +386,41 @@ def test_backprop_2layer():
                                              for gradient_store
                                              in gradient_stores], axis=0)
 
+        lr = 1e-3
+            
         learner_sa1.apply_gradients(gradient_store=avg_gradient_store,
-                                   learning_rate=1e-3)
+                                    learning_rate=lr)
         learner_ff1.apply_gradients(gradient_store=avg_gradient_store,
-                                   learning_rate=1e-3)
+                                    learning_rate=lr)
         learner_sa2.apply_gradients(gradient_store=avg_gradient_store,
-                                   learning_rate=1e-3)
+                                    learning_rate=lr)
         learner_ff2.apply_gradients(gradient_store=avg_gradient_store,
-                                   learning_rate=1e-3)
+                                    learning_rate=lr)
         
 
+def test_backprop_real():
+    transformer = ProgrammableTransformer(program_path='syntax.att')
+
+    transformer.fuzz(1e-3)
+    
+    cls_sentences = []
+    with open('in_domain_train.tsv') as cola_file:
+        for line in cola_file:
+            source, grammatical, og_grammatical, sentence = line.split('\t')
+            cls_sentences.append((sentence, bool(int(grammatical))))
+
+    for i in range(10000):
+        np.random.shuffle(cls_sentences)
+        transformer.train_batch(cls_sentences=cls_sentences[:64],
+                                learning_rate=1e-4,
+                                trainable=['LEXICON'])
+
+    transformer.surface_changes()
+        
+        
 if __name__ == '__main__':
     # test_backprop_feed_forward()
     # test_backprop_self_attention()
     # test_backprop_1layer()
-    test_backprop_2layer()
+    # test_backprop_2layer()
+    test_backprop_real()

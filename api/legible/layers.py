@@ -22,6 +22,11 @@ class EdAttentionLayer:
         self.decoder = None
         self.encoder = None
         
+    def fuzz(self, magnitude):
+        self.query_mat += magnitude * np.random.randn(*self.query_mat.shape)
+        self.key_mat += magnitude * np.random.randn(*self.query_mat.shape)
+        self.value_mat += magnitude * np.random.randn(*self.query_mat.shape)
+
     def call(self, *, words, encoder, decoder, json_log, hidx, real_start, real_end):
         # encoder is [key_seqlen, embedding]
         self.encoder = encoder
@@ -185,12 +190,21 @@ class SelfAttentionLayer(EdAttentionLayer):
                             decoder=vectors, json_log=json_log,
                             hidx=hidx, real_start=real_start,
                             real_end=real_end)
+
+    def backprop(self, *, dloss_dg, gradient_store):
+        denc, ddec = super().backprop(dloss_dg=dloss_dg,
+                                      gradient_store=gradient_store)
+        return denc + ddec
     
 class MultiheadAttentionLayer:
     def __init__(self, *, heads, semes):
         self.heads = heads
         self.semes = semes
 
+    def fuzz(self, magnitude):
+        for head in self.heads:
+            head.fuzz(magnitude)
+        
     @classmethod
     def parse_layer(cls, *, obj, semes, clocks):
         pass
@@ -295,12 +309,17 @@ class WordEmbeddingLayer:
 
         return rv
 
+    def fuzz(self, magnitude):
+        raise NotImplementedError
+    
     def backprop(self, *, dloss_dg, gradient_store):
         gradient_store[id(self), 'embeddings'] = dloss_dg.copy()
 
     def apply_gradients(self, *, gradient_store, learning_rate):
         for word, dword in zip(self.words,
-                               gradient_store[id(self), 'embeddings']):
+                               gradient_store.pop((id(self), 'embeddings'))):
+            if word not in self.dictionary:
+                self.dictionary[word] = self.semes.neutral()
             self.dictionary[word] -= learning_rate * dword
         
     def call_transpose(self, vectors, json_log):
@@ -370,9 +389,11 @@ class ClassificationLayer:
         # [embedding]
         dloss_dmaxpool = dloss_dweird * self.semes.str2vec('+weird')
 
+        thing1 = (self.input == self.maxpool.reshape(1, -1))
+
         # [seqlen, embedding]
-        dloss_dinput = dloss_dmaxpool * (
-            self.input == self.maxpool.reshape(1, -1))
+        dloss_dinput = dloss_dmaxpool * thing1
+            
 
         return dloss_dinput
         
@@ -398,6 +419,13 @@ class FeedForwardLayer:
         self.dense_relu = None
         self.dense_relu_dense = None
         self.output = None
+
+
+    def fuzz(self, magnitude):
+        self.mat1 += magnitude * np.random.randn(*self.mat1.shape)
+        self.mat2 += magnitude * np.random.randn(*self.mat2.shape)
+        self.bias1 += magnitude * np.random.randn(*self.bias1.shape)
+        self.bias2 += magnitude * np.random.randn(*self.bias2.shape)
         
     def call(self, *, words, vectors, json_log):
         # [seqlen, embedding]

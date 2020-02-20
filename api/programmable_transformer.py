@@ -109,7 +109,7 @@ class ProgrammableTransformer:
         self.program_path = program_path
 
         with open(self.program_path) as file:
-            self.program = yaml.load(file, Loader=yaml.FullLoader)
+            self.program = yaml.load(file, Loader=yaml.SafeLoader)
 
         self.clocks = ClockLayer(self.program.pop('CLOCKS'))
 
@@ -199,7 +199,7 @@ class ProgrammableTransformer:
             clocks=self.clocks)
 
         self.classification = ClassificationLayer(
-            semes=self.semes)
+            semes=self.og_semes)
         
         assert len(self.program) == 0
 
@@ -219,7 +219,7 @@ class ProgrammableTransformer:
         neutral_posns[:, -2 * len(self.clocks.components):] = posns
 
         output = np.concatenate([neutral_posns, neutral_posns, output,
-                                 self.roles, neutral_posns,
+                                 neutral_posns,
                                  neutral_posns], axis=0)
         output = self.normalize.call(output, json_log=json_log)
 
@@ -303,3 +303,150 @@ class ProgrammableTransformer:
         
         return output, json_log
 
+    def backprop(self, *, gradient_store):
+        fake_json_log = dict(layers=[])
+        grad = self.classification.backprop(gradient_store=gradient_store)
+        nwords = len(grad)
+        neutral_posns = np.zeros_like(grad)
+        grad = np.concatenate([neutral_posns, neutral_posns, grad,
+                               neutral_posns,
+                               neutral_posns], axis=0)
+        grad = np.concatenate([grad, np.zeros_like(grad)[:, :10]], axis=1)
+        grad = self.feed_forward5.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention5.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+
+        grad = self.feed_forward4.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention4.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+
+        grad = self.feed_forward3.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention3.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        
+        grad = self.feed_forward2.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention2.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        
+        grad = self.feed_forward1.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention1.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        
+        grad = self.feed_forward.backprop(dloss_dg=grad,
+                                           gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+        grad = self.self_attention.backprop(dloss_dg=grad,
+                                             gradient_store=gradient_store)
+        grad = self.normalize.call(vectors=grad, json_log=fake_json_log)
+
+        grad = grad[2*nwords:3*nwords]
+        grad = self.lexicon.backprop(dloss_dg=grad,
+                                     gradient_store=gradient_store)
+
+    def fuzz(self, magnitude):
+        self.feed_forward.fuzz(magnitude)
+        self.self_attention.fuzz(magnitude)
+
+        self.feed_forward1.fuzz(magnitude)
+        self.self_attention1.fuzz(magnitude)
+
+        self.feed_forward2.fuzz(magnitude)
+        self.self_attention2.fuzz(magnitude)
+
+        self.feed_forward3.fuzz(magnitude)
+        self.self_attention3.fuzz(magnitude)
+
+        self.feed_forward4.fuzz(magnitude)
+        self.self_attention4.fuzz(magnitude)
+
+        self.feed_forward5.fuzz(magnitude)
+        self.self_attention5.fuzz(magnitude)
+                
+    def apply_gradients(self, *, gradient_store, learning_rate, trainable):
+        self.feed_forward.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+
+        self.feed_forward1.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention1.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+
+        self.feed_forward2.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention2.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+
+        self.feed_forward3.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention3.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+
+        self.feed_forward4.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention4.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+
+        self.feed_forward5.apply_gradients(gradient_store=gradient_store,
+                                          learning_rate=learning_rate)
+        self.self_attention5.apply_gradients(gradient_store=gradient_store,
+                                            learning_rate=learning_rate)
+        
+    def train_batch(self, *, cls_sentences, learning_rate, trainable):
+        gradient_stores = []
+        confusion = np.zeros((2, 2))
+        for sentence, cls in cls_sentences:
+            output, _ = self.call(sentence.split())
+            # print(sentence.strip())
+            # print(output)
+            confusion[int(cls), int(output)] += 1
+            if output != cls:
+                gradient_store = {}
+                self.backprop(gradient_store=gradient_store)
+                gradient_stores.append(gradient_store)
+                self.lexicon.apply_gradients(gradient_store=gradient_store,
+                                             learning_rate=10 * learning_rate)
+            else:
+                pass
+
+        print(confusion)
+
+        hits = len(cls_sentences) - len(gradient_stores)
+        tot = len(cls_sentences)
+        
+        print('acc', hits, tot)
+
+        prec = confusion[0, 0] / (confusion[0, 0] + confusion[1, 0])
+        rec = confusion[0, 0] / (confusion[0, 0] + confusion[0, 1])
+        f1 = 2 * prec * rec / (prec + rec + 1e-10)
+        print('f1', f1)
+        
+        if not gradient_stores:
+            print('NO ERRORS')
+            return
+                
+        avg_gradient_store = {}
+        for k in gradient_stores[0]:
+            avg_gradient_store[k] = np.mean([gradient_store[k]
+                                             for gradient_store
+                                             in gradient_stores], axis=0)
+            
+        self.apply_gradients(gradient_store=avg_gradient_store,
+                             learning_rate=learning_rate,
+                             trainable=trainable)
