@@ -43,11 +43,22 @@ function tokens2str(tokens, semes) {
     for (const i in tokens) {
         let token = tokens[i];
         for (const s in token) {
-            let this_str = s + ': ' + token[s];
+            let this_str = '[' + s + ': ' + token[s] + ']';
             strs.push(this_str);
         }
     }
     return strs.join('\n');
+}
+
+function tokens2words(tokens) {
+    let rv = [];
+    for (const i in tokens) {
+        let token = tokens[i];
+        for (const s in token) {
+            rv.push(s)
+        }
+    }
+    return rv
 }
 
 function str2vec(s, semes) {
@@ -386,8 +397,10 @@ class HandAttention extends HandLayer {
         let querymat = this.querymat;
         let valuemat = this.valuemat;
         let semes = this.semes;
+        let inputs = this.inputs;
         let vec_inputs = this.inputs.map(x => tokens2vecs(x, this.semes));
         let str_inputs = this.inputs.map(x => tokens2str(x, this.semes));
+        let words = this.inputs.map(x => tokens2words(x));
         let vec_outputs = vec_inputs.map(
             function (vec_input) {
                 let keys = math.multiply(vec_input, keymat);
@@ -396,11 +409,6 @@ class HandAttention extends HandLayer {
                 let attn = math.multiply(queries, math.transpose(keys));
                 let interpretant = math.multiply(attn, values);
                 attn = softmax(attn, {axis: 1})
-                console.log('keys', keys);
-                console.log('queries', queries);
-                console.log('values', values);
-                console.log('attn', attn);
-                console.log('int', interpretant);
                 return interpretant;
             }
         );
@@ -409,7 +417,7 @@ class HandAttention extends HandLayer {
                 let strs = math.map(x, function (y, idx) {
                     if (y != 0) {
                         if (y == 1) {
-                            return semes[idx[1]];
+                            return '+' + semes[idx[1]];
                         }
                         if (y == -1) {
                             return '-' + semes[idx[1]];
@@ -418,12 +426,17 @@ class HandAttention extends HandLayer {
                     }
                     return '';
                 });
-                console.log('strs1', strs);
-                return math.apply(strs, 1,
-                                  function (a, b) {
-                                      console.log('ab', a, b);
+                let arr = math.apply(strs, 1,
+                                  function (a) {
                                       return a.join(' ').trim();
                                   });
+                let arr2 = arr.map(function(a, j) {
+                    if (a == '') {
+                        return '';
+                    }
+                    return '[' + words[i][j] + ':' + a + ']';
+                });
+                return arr2.toArray().join(' ').trim();
             }
         );
         let io_pairs = str_inputs.map(function(a, i) {

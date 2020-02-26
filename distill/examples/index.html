@@ -503,7 +503,7 @@ examples:
     code maps $$apple$$ OR $$banana$$ to $$yum$$ and $$cherry$$ AND
     $$durian$$ to $$yuck$$.<d-footnote>No offense to lovers of either
     fruit.</d-footnote> As a challenge, consider how you would
-    represent $$apple$$ AND $$banana$$ AND $$cherry$$. (You may find
+    represent $$apple$$ OR $$banana$$ OR $$cherry$$. (You may find
     you need auxilliary semes!)
     </p>
 
@@ -562,7 +562,8 @@ examples:
       simplicity. Later, we will consider multi-head attention. For
       the time being, we are not using positional embeddings, which
       greatly restricts the ability of the network to associate nouns
-      with the correct modifiers. We will address this shortcoming
+      with the correct modifiers (and you will see such errors in the
+      output of the next figure). We will address this shortcoming
       later, once we have some slightly better notation.
     </p>
 
@@ -584,19 +585,19 @@ keymat: adjective>xa
 querymat: noun>xa
 valuemat: red>red green>green blue>blue
 examples:
-    - 
+    - # apple gets red
       - a: +det
       - red: +adjective +red
       - apple: +noun +apple
-    - 
+    - # banana gets green
       - a: +det
       - green: +adjective +green
       - banana: +noun +banana
-    - 
+    - # cherry gets blue
       - a: +det
       - blue: +adjective +blue
       - cherry: +noun +cherry
-    - 
+    - # both nouns get both colors, which is incorrect
       - a: +det
       - red: +adjective +red
       - cherry: +noun +cherry
