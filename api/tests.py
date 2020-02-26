@@ -401,7 +401,7 @@ def test_backprop_2layer():
 def test_backprop_real():
     transformer = ProgrammableTransformer(program_path='syntax.att')
 
-    transformer.fuzz(1e-3)
+    transformer.fuzz(1e-6)
     
     cls_sentences = []
     with open('in_domain_train.tsv') as cola_file:
@@ -409,7 +409,8 @@ def test_backprop_real():
             source, grammatical, og_grammatical, sentence = line.split('\t')
             cls_sentences.append((sentence, bool(int(grammatical))))
 
-    for i in range(10000):
+    for i in range(10):
+        print(i)
         np.random.shuffle(cls_sentences)
         transformer.train_batch(cls_sentences=cls_sentences[:64],
                                 learning_rate=1e-4,

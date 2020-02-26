@@ -11,6 +11,10 @@ class EdAttentionLayer:
         self.key_mat = key_mat
         self.value_mat = value_mat
 
+        self.og_query_mat = query_mat.copy()
+        self.og_key_mat = key_mat.copy()
+        self.og_value_mat = value_mat.copy()
+        
         self.include_self = include_self
         self.future_mask = future_mask
         self.past_mask = past_mask
@@ -413,6 +417,11 @@ class FeedForwardLayer:
         self.docstring = docstring
         self.semes = semes
 
+        self.og_mat1 = mat1.copy()
+        self.og_mat2 = mat2.copy()
+        self.og_bias1 = bias1.copy()
+        self.og_bias2 = bias2.copy()
+        
         # tensors used during fwd and bkwd passes
         self.input = None
         self.dense = None

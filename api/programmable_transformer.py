@@ -203,6 +203,10 @@ class ProgrammableTransformer:
         
         assert len(self.program) == 0
 
+    def surface_changes(self):
+        import ipdb
+        ipdb.set_trace()
+        
     def call(self, words):
         json_log = {'layers': [
             {'name': 'Input',
@@ -421,7 +425,7 @@ class ProgrammableTransformer:
                 self.backprop(gradient_store=gradient_store)
                 gradient_stores.append(gradient_store)
                 self.lexicon.apply_gradients(gradient_store=gradient_store,
-                                             learning_rate=10 * learning_rate)
+                                             learning_rate=learning_rate)
             else:
                 pass
 

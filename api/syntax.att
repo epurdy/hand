@@ -354,7 +354,11 @@ LEXICON:
     loved: +love +verb +preterite +agentlack +themelack
     loves: +love +verb +3rdsg +agentlack +themelack
 
+    meet: +meet +verb +plain +agentlack +patientlack
+    meets: +meet +verb +3rdsg +agentlack +patientlack
+    mend: +mend +verb +plain +agentlack +patientlack
     mended: +mend +verb +preterite +agentlack +patientlack
+    mends: +mend +verb +3rdsg +agentlack +patientlack
     met: +meet +verb +preterite +agentlack +patientlack
     mumble: +mumble +verb +plain +agentlack
     mumbled: +mumble +verb +preterite +agentlack
