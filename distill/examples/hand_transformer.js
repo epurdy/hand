@@ -9,6 +9,20 @@ function relu(x) {
     return math.map(x, relu_single);
 }
 
+function simple_sigmoid_single(x) {
+    if (x < 0) {
+        return 0;
+    }
+    if (x > 1) {
+        return 1;
+    }
+    return x;
+}
+
+function simple_sigmoid(x) {
+    return math.map(x, simple_sigmoid_single);
+}
+
 function softmax(x, options) {
     let axis = options.axis;
     if (axis != 0 && axis != 1) {
@@ -153,7 +167,7 @@ function vec2str(v, semes) {
     let rv = '';
     math.forEach(v, function(val, idx) {
         if (val != 0) {
-            let atom = val + semes[idx] + ' ';
+            let atom = Math.round(val* 1000) / 1000 + semes[idx] + ' ';
             if (val == 1) {
                 atom = semes[idx] + ' ';
             }
@@ -397,7 +411,6 @@ class HandAttention extends HandLayer {
         let querymat = this.querymat;
         let valuemat = this.valuemat;
         let semes = this.semes;
-        let inputs = this.inputs;
         let vec_inputs = this.inputs.map(x => tokens2vecs(x, this.semes));
         let str_inputs = this.inputs.map(x => tokens2str(x, this.semes));
         let words = this.inputs.map(x => tokens2words(x));
@@ -460,6 +473,100 @@ class HandAttention extends HandLayer {
             this.keymat = str2mat(doc.keymat, this.semes);
             this.querymat = str2mat(doc.querymat, this.semes);
             this.valuemat = str2mat(doc.valuemat, this.semes);
+            this.inputs = doc.examples;
+        }
+        this.redraw();
+    }
+}
+
+class HandRnn extends HandLayer {
+    constructor(args) {
+        super(args);
+        this.blocks = [{x: 0, y:70, w:50, h:50, text: 'input'},
+                       {x: 70, y:70, w:50, h:50, text: 'embed'},
+                       {x: 140, y:70, w:50, h:50, text: 'rnn1'},
+                       {x: 210, y:70, w:50, h:50, text: 'rnn2'},
+                       {x: 280, y:70, w:50, h:50, text: 'pool'},
+                       {x: 350, y:70, w:50, h:50, text: 'dense'},
+                       {x: 420, y:70, w:50, h:50, text: 'output'},
+                      ];
+
+        this.wires = [
+            {x1: 0, y1: 95, x2:425, y2: 95},
+        ];
+        this.recompute();
+    }
+
+    get_io_pairs() {
+        let a1 = this.a1;
+        let b1 = this.b1;
+        let bias1 = this.bias1;
+        let a2 = this.a2;
+        let b2 = this.b2;
+        let bias2 = this.bias2;
+        let semes = this.semes;
+        let lexicon = this.lexicon;
+        let inputs = this.inputs.map(x => x.split(/\s+/));
+        let vec_inputs = inputs.map(x => x.map(y => str2vec(lexicon[y], semes)));
+        let vec_outputs = [];
+        for (const i in vec_inputs) {
+            let h0t = math.zeros(semes.length);
+            let h1t = math.zeros(semes.length);
+            let h2t = math.zeros(semes.length);
+            let h2t_tot = math.zeros(semes.length);
+            for (const t in vec_inputs[i]) {
+                h0t = vec_inputs[i][t];
+                h1t = simple_sigmoid(
+                    math.add(
+                        h0t,
+                        math.add(
+                            math.multiply(h0t, this.a1),
+                            math.add(
+                                math.multiply(h1t, this.b1),
+                                this.bias1))));
+                h2t = simple_sigmoid(
+                    math.add(
+                        h1t,
+                        math.add(
+                            math.multiply(h1t, this.a2),
+                            math.add(
+                                math.multiply(h2t, this.b2),
+                                this.bias2))));
+                h2t_tot = math.add(h2t_tot, h2t);
+            }
+            let x0 = math.multiply(h2t_tot, 1 / vec_inputs[i].length);
+            let x1 = simple_sigmoid(
+                math.add(math.multiply(x0, this.c), this.cbias));
+            vec_outputs.push(x1);
+        }
+        let str_outputs = vec_outputs.map(vec => vec2str(vec, semes));
+        let io_pairs = this.inputs.map(function(a, i) {
+            return [a, str_outputs[i]];
+        });
+        return io_pairs;
+    }
+    
+    recompute(event) {
+        this.program = this.codeMirror.getValue();
+        let failed = true;
+        let doc = null;
+        try {
+            doc = jsyaml.load(this.program);
+            this.semes = doc.semes.split(/\s+/);
+            failed = false;
+        } catch(err) {
+            console.log('parse failure');
+        }
+        if (!failed) {
+            this.lexicon = doc.lexicon;
+            this.a1 = str2mat(doc.rnn_layer1.A, this.semes);
+            this.b1 = str2mat(doc.rnn_layer1.B, this.semes);
+            this.bias1 = str2vec(doc.rnn_layer1.bias, this.semes);
+            this.a2 = str2mat(doc.rnn_layer2.A, this.semes);
+            this.b2 = str2mat(doc.rnn_layer2.B, this.semes);
+            this.bias2 = str2vec(doc.rnn_layer2.bias, this.semes);
+            this.c = str2mat(doc.dense1.C, this.semes);
+            this.cbias = str2vec(doc.dense1.c, this.semes);
             this.inputs = doc.examples;
         }
         this.redraw();

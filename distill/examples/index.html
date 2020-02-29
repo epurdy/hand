@@ -86,23 +86,28 @@
       <ul>
         <li>The resulting hardcoded networks are <b>extremely
             interpretable</b> and may be useful for some tasks where
-          that is a requirement.</li>
+          that is a requirement.
+        </li>
         <li>The process of hardcoding a network provides valuable
           insight into <b>what kinds of computation are
             performable</b> with the various components of a particular
-          architecture.</li>
+          architecture.
+        </li>
+        <li>Hardcoding a network gives a better understanding of the
+          <b>space of possible variants</b> of a particular
+          architecture.
+        </li>
         <li>Hardcoding neural networks for natural language processing
           allows us to encode linguistic knowledge in a format that is
           usable for linguistic competence, thus allowing us
           to <b>rigorously test linguistic theories</b> and
           potentially providing <b>a new experimental framework for
-            work in linguistics</b>.</li>
-        <li>Hardcoding a network gives a better understanding of the
-          <b>space of possible variants</b> of a particular
-          architecture.</li>
+            work in linguistics</b>.
+        </li>
         <li>There are several ways to <b>combine hardcoded components
             with learned components</b> to achieve some of the
-          advantages of both.</li>
+          advantages of both.
+        </li>
       </ul>
     </p>
 
@@ -178,7 +183,222 @@
 
 
 
-    <a class="marker" href="#section-2.1" id="section-2.1"><span>2.1</span></a>
+    <a class="marker" href="#section-3" id="section-3"><span>3</span></a>
+    <h2>Discussion</h2>
+
+
+
+    <a class="marker" href="#section-3.1" id="section-3.1"><span>3.1</span></a>
+    <h2>Interpretability</h2>
+
+    <p>It is generally accepted that deep neural networks are
+      uninterpretable. We show in this article that they can be made
+      quite interpretable by using better notation, with no or very
+      little change to the architecture. Unfortunately, building a
+      network that is able to perform a nontrivial task is quite
+      complex and requires either a lot of preliminaries or intimate
+      familiarity with the architectures in question; we will
+      gradually build up to such networks. To whet the reader&apos;s
+      appetite, we show here a simple (vanilla) RNN designed to do
+      sentiment analysis, based on the VADER
+      algorithm.<d-cite key="vader"></d-cite> (VADER itself is already
+      extremely interpretable; this is only meant to demonstrate that
+      a fairly simple vanilla RNN can be made just as interpretable.)
+    </p>
+
+    <p>
+      The following figure can be edited interactively. We have
+      provided a bare minimum set of word embeddings (below called
+      "lexicon"), so adding additional examples will probably require
+      adding additional items to the lexicon.
+    </p>
+
+    <aside>Any shortcomings of the network below should not be taken
+      to reflect on the VADER algorithm, of which this network is only
+      a crude sketch.
+    </aside>
+
+    <d-figure id="figure-vader" style="border: 1px solid black">
+      <svg id="figure-vader-svg" width="500" height="200" />
+    </d-figure>
+    <script>
+      const figureVader = document.querySelector(
+          "d-figure#figure-vader");
+      const initTagVader = document.createElement("div");
+      figureVader.appendChild(initTagVader);
+
+      let layer = null;
+
+      figureVader.addEventListener("ready", function () {
+          const initTagVader = figureVader.querySelector("div");
+          layer = new HandRnn(
+              {program: `
+semes: stop positive negative negation contrastive intensifier
+       lessener intensepunctuation 
+       xa xb xc xd xe ya yb yc yd ye
+
+lexicon:
+    ",": stop
+    ".": stop
+    "I'll": stop
+    At: stop
+    It: stop
+    The: stop
+    Today: stop
+    VADER: stop
+    a: stop
+    all: stop
+    and: stop
+    are: stop
+    at: stop
+    book: stop
+    by: stop
+    characters: stop
+    dialog: stop
+    get: stop
+    is: stop
+    it: stop
+    of: stop
+    plot: stop
+    the: stop
+    was: stop
+    FUNNY: positive
+    GOOD: positive
+    GREAT: positive
+    HANDSOME: positive
+    LOL: positive
+    SMART: positive
+    funny: positive
+    good: positive
+    great: positive
+    handsome: positive
+    lol: positive
+    smart: positive
+    SUX: negative
+    bad: negative
+    horrible: negative
+    sux: negative
+    uncompelling: negative
+    "!": intensepunctuation
+    "!!!": intensepunctuation
+    very: intensifier
+    VERY: intensifier
+    uber: intensifier
+    FRIGGIN: intensifier
+    only: lessener
+    kinda: lessener
+    not: negation
+    nor: stop
+    isnt: negation
+    Not: negation
+    But: contrastive
+    but: contrastive
+
+# H^0_t = I_t
+# H^l_0 = 0
+# H^l_t = sigmoid[(I + A^l) H^{l-1}_t + B^l H^l_{t-1} + bias^l]
+# X^0 = mean_t H^2_t
+# X^1 = sigmoid(C^1 X^0 + c^l)
+
+rnn_layer1:
+    A: positive>xa negative>ya positive>xb negative>yb
+       negation>negation intensifier>intensifier lessener>lessener
+
+    B: intensifier>xa intensifier>ya lessener>xb lessener>yb
+       negation>negation 0.5intensifier>intensifier 0.5lessener>lessener
+
+    bias: -xa -xb -ya -yb
+
+rnn_layer2:
+    A: xa>xc ya>yc xb>xd yb>yd negation>xc negation>xd negation>yc
+       negation>yd positive>xe negation>xe negative>ye negation>ye
+
+    B: ''
+
+    bias: -xc -xd -yc -yd -xe -ye
+
+dense1:
+    C: positive>positive negative>negative 2xa>positive 0.5xb>positive
+       ya>negative 0.5yb>negative xc>negative xd>negative yc>positive
+       yd>positive -2xc>positive -2xd>positive -2yc>negative
+       -2yd>negative xe>negative ye>positive -xe>positive -ye>negative
+    c: ''
+
+
+examples:  # examples modified from https://github.com/cjhutto/vaderSentiment
+    - VADER is smart , handsome , and funny .
+    - VADER is smart , handsome , and funny !
+    - VADER is very smart , handsome , and funny .
+    - VADER is VERY SMART , handsome , and FUNNY .
+    - VADER is VERY SMART , handsome , and FUNNY !!!
+    - VADER is VERY SMART , uber handsome , and FRIGGIN FUNNY !!!
+    - VADER is not smart , handsome , nor funny .
+    - The book was good .
+    - It isnt a horrible book .
+    - The book was only kinda good .
+    - The plot was good , but the characters are uncompelling and the dialog is not great .
+    - Today SUX !
+    - Today only kinda sux ! But I'll get by , lol
+    - Not bad at all
+`,
+               id: 'figure-vader',
+               topLevel: true,
+               document: document,
+               container: initTagVader});
+      });
+
+    </script>
+
+
+
+    <a class="marker" href="#section-3.2" id="section-3.2"><span>3.2</span></a>
+    <h2>As a Tool to Build Intuition</h2>
+
+    <aside>
+    <li>The process of hardcoding a network provides valuable
+          insight into <b>what kinds of computation are
+            performable</b> with the various components of a particular
+          architecture.
+        </li>
+        <li>Hardcoding a network gives a better understanding of the
+          <b>space of possible variants</b> of a particular
+          architecture.
+        </li>
+    </aside>
+
+
+    <a class="marker" href="#section-3.3" id="section-3.3"><span>3.3</span></a>
+    <h2>Usefulness for Linguistics</h2>
+        <aside>Hardcoding neural networks for natural language processing
+          allows us to encode linguistic knowledge in a format that is
+          usable for linguistic competence, thus allowing us
+          to <b>rigorously test linguistic theories</b> and
+          potentially providing <b>a new experimental framework for
+            work in linguistics</b>.
+        </aside>
+
+
+    <a class="marker" href="#section-3.4" id="section-3.4"><span>3.4</span></a>
+    <h2>Combining Learning with Programming</h2>
+        <aside>There are several ways to <b>combine hardcoded components
+            with learned components</b> to achieve some of the
+          advantages of both.
+        </aside>
+
+
+
+    <a class="marker" href="#section-4" id="section-4"><span>4</span></a>
+    <h2>Ingredients of Transformer Networks</h2>
+
+    <p>In this section, we lay out the workings of a Transformer
+      piece-by-piece, indicating how each can be programmed. In the
+      next section, we will actually build a network that classifies
+      sentences as grammatical or not.
+    </p>
+
+    
+
+    <a class="marker" href="#section-4.1" id="section-4.1"><span>4.1</span></a>
     <h2>Pointwise Dense Layers</h2>
     <p>As the next step, we will consider a pointwise dense layer,
       which requires one matrix parameter (the weights) and one vector
@@ -239,7 +459,7 @@ examples:
 
 
 
-    <a class="marker" href="#section-2.3" id="section-2.2"><span>2.2</span></a>
+    <a class="marker" href="#section-4.2" id="section-4.2"><span>4.2</span></a>
     <h2>Word Embeddings</h2>
     <p>
       Our ultimate goal is to write down all the weights for a
@@ -475,7 +695,7 @@ examples:
 
 
 
-    <a class="marker" href="#section-2.3" id="section-2.3"><span>2.3</span></a>
+    <a class="marker" href="#section-4.3" id="section-4.3"><span>4.3</span></a>
     <h2>Transformer Feed-Forward Layers</h2>
     <p>Next we consider the feed-forward layers of Transformer. These
       are typically two dense layers with a ReLU nonlinearity between
@@ -507,7 +727,7 @@ examples:
     you need auxilliary semes!)
     </p>
 
-    
+
     <d-figure id="figure-feedforward" style="border: 1px solid black">
       <svg id="figure-feedforward-svg" width="500" height="200" />
     </d-figure>
@@ -552,7 +772,7 @@ examples:
 
 
 
-    <a class="marker" href="#section-2.4" id="section-2.4"><span>2.4</span></a>
+    <a class="marker" href="#section-4.4" id="section-4.4"><span>4.4</span></a>
     <h2>Transformer Attention Layers</h2>
     <p>Finally, we come to the most iconic layer of the Transformer,
       the attention layer. This layer is the only layer in which the
@@ -615,10 +835,20 @@ examples:
     </script>
 
 
+
+    <a class="marker" href="#section-4.5" id="section-4.5"><span>4.5</span></a>
+    <h2>Positional Encoding, Explained</h2>
+
+
+
+    <a class="marker" href="#section-4.6" id="section-4.6"><span>4.6</span></a>
+    <h2>Transformer Attention Layers with Positional Encoding</h2>
     
-    <a class="marker" href="#section-3" id="section-3"><span>3</span></a>
+
+
+    <a class="marker" href="#section-9" id="section-9"><span>9</span></a>
     <h2>Unused Stuff</h2>
-    
+
     <p>As an example, consider the problem of classifying sentences
       as being sensible (e.g., "He saw the dog") or anomalous (e.g.,
       "The apple saw the dog"). There are many ways for a sentence to be
