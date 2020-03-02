@@ -354,36 +354,82 @@ examples:  # examples modified from https://github.com/cjhutto/vaderSentiment
     <a class="marker" href="#section-3.2" id="section-3.2"><span>3.2</span></a>
     <h2>As a Tool to Build Intuition</h2>
 
-    <aside>
-    <li>The process of hardcoding a network provides valuable
-          insight into <b>what kinds of computation are
-            performable</b> with the various components of a particular
-          architecture.
-        </li>
-        <li>Hardcoding a network gives a better understanding of the
-          <b>space of possible variants</b> of a particular
-          architecture.
-        </li>
-    </aside>
-
+    <p>The process of hardcoding a network provides valuable insight
+       into what kinds of computation are performable at all with the
+       various components of a particular architecture, as well as
+       what kinds of computation are natural (and thus likely easy to
+       learn) and which kinds are unnatural (and thus at least
+       potentially more difficult to learn). For an example, consider
+       the first layer of a Transformer decoder. This layer takes in
+       an embedding of the previously emitted word and performs
+       various manipulations on it. However, there is a residual
+       connection, so that the manipulations simply add things to the
+       embedding of the previous word. This makes it somewhat
+       difficult to erase the previous word&apos;s embedding, which is
+       necessary to avoid simply repeating the previous word ad
+       infinitum. This is relatively easy to address with a
+       self-attention layer, but it suggests that a Transformer
+       network would likely be well-served by adding a pointwise dense
+       layer (without a residual connection) between the embedding of
+       the previous word and the first decoder layer. It also suggests
+       an explanation for the repetitiveness of Transformer networks
+       in early training: the network has not yet learned to erase the
+       embedding of the previous word sufficiently well. Hopefully
+       further explanation will yield many more such insights and
+       interventions.
+    </p>
 
     <a class="marker" href="#section-3.3" id="section-3.3"><span>3.3</span></a>
     <h2>Usefulness for Linguistics</h2>
-        <aside>Hardcoding neural networks for natural language processing
-          allows us to encode linguistic knowledge in a format that is
-          usable for linguistic competence, thus allowing us
-          to <b>rigorously test linguistic theories</b> and
-          potentially providing <b>a new experimental framework for
-            work in linguistics</b>.
-        </aside>
 
+    <p>Hardcoding neural networks for natural language processing
+       allows us to encode linguistic knowledge in a format that is
+       usable for linguistic competence (e.g., grammaticality
+       judgments, entailment judgments, translation, dialogue), thus
+       allowing us to rigorously test the sufficiency of a linguistic
+       theory for explaining a particular phenomenon. Such work is not
+       in any sense new in linguistics, but we hope that the
+       high-performing Transformer architecture adds a valuable tool
+       now that we can understand what is going on inside of it.
+    </p>
 
     <a class="marker" href="#section-3.4" id="section-3.4"><span>3.4</span></a>
     <h2>Combining Learning with Programming</h2>
-        <aside>There are several ways to <b>combine hardcoded components
-            with learned components</b> to achieve some of the
-          advantages of both.
-        </aside>
+    <p>There are several ways to combine hardcoded components with
+       learned components to achieve some of the advantages of
+      both. We list several ideas in this vein:
+      <ul>
+        <li>Initializing a Transformer network from a hand-built set
+          of weights, then learning from data on top of this. We can
+          definitely create initializations that are far stronger than
+          any random initialization. Note that hand-built networks
+          tend to have symmetries resulting from their sparse weights,
+          so the weights should have noise added to them to break this
+          symmetry.
+        </li>
+        <li>Writing weight matrices as sums of word embedding outer
+          products, and then learning only the word embeddings. For
+          instance, we can interpret $$\{\{red\rightarrow blue\}\}$$
+          as the outer product of the word embedding for "red" and the
+          word embedding for "blue". This would allow us to use
+          traditional learned word embeddings while still retaining a
+          large amount of insight into the internal workings of the
+          network. It might also allow us to encode certain semantic
+          relationships solely by enumerating examples of the semantic
+          relationship. For example, $$\{\{eat\rightarrow animal,
+          drink\rightarrow animal, sleep\rightarrow animal,
+          see\rightarrow animal\}\}$$ might encode that a subject that
+          eats, drinks, sleeps, or sees is probably an animal. Given
+          appropriate word embeddings, this might then generalize to
+          such activities as hearing, snoozing, sipping, or chewing.
+        </li>
+        <li>Initializing a Transformer network from hand-built
+          weights, then doing some number of steps of gradient descent
+          to get <b>proposed new rules</b> to add to the existing
+          weight specification rules.
+        </li>
+      </ul>
+    </p>
 
 
 
@@ -886,8 +932,9 @@ examples:
 
     <p>In this section, we show a Transformer programmed to translate
       English to French. This network is solving a toy version of the
-      problem; the author has very little knowledge of French,
-      unfortunately.
+      problem (it can handle 300 or so sentences); the author has very
+      little knowledge of French, unfortunately, which makes writing
+      the decoder difficult.
     </p>
 
     <d-figure id="figure-translation" style="border: 1px solid black">
