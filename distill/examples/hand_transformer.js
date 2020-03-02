@@ -464,6 +464,7 @@ class HandSelfAttention extends HandLayer {
         let str_outputs = vec_outputs.map(
             function (x, i) {
                 let strs = math.map(x, function (y, idx) {
+                    y = (Math.round(1000 * y) / 1000);
                     if (y != 0) {
                         if (y == 1) {
                             return '+' + semes[idx[1]];

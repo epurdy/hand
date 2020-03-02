@@ -801,8 +801,8 @@ examples:
           let layer = new HandSelfAttention(
               {program: `semes: red green blue apple banana cherry durian
        det adjective noun conjunction xa
-keymat: adjective>xa
-querymat: noun>xa
+keymat: 10adjective>xa 10det>det 10conjunction>conjunction 10det>adjective
+querymat: 10noun>xa 10det>det 10conjunction>conjunction 10adjective>adjective
 valuemat: red>red green>green blue>blue
 examples:
     - # apple gets red
