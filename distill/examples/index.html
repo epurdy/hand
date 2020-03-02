@@ -1013,18 +1013,18 @@ self_attention2:
                   wearing>wearing
 
           valuemat: sos>subject pro>verb pro>helper -pro>adjective
-                    2helper>verb verb>article article>noun
+                    2helper>verb 3helper>eating verb>article article>noun
                     noun>adjective 2adjective>eos -noun>verb -2sos>sos
-                    -2eos>eos -20first>first -2second>second
-                    -2third>third -2pro>pro -20noun>noun
+                    -2eos>eos -2first>first -2second>second
+                    -2third>third -20pro>pro -20noun>noun
                     -20helper>helper -20adjective>adjective
                     -2article>article -2male>male -2female>female
                     -2shirt>shirt -2coat>coat -2donut>donut
                     -2steak>steak -2salad>salad -2apple>apple
                     -2human>human -2cat>cat -2dog>dog -2red>red
                     -2green>green -2blue>blue -2wearable>wearable
-                    -2edible>edible -2eating>eating -2wearing>wearing
-                    -2subject>subject
+                    -2edible>edible -20eating>eating -20wearing>wearing
+                    -2subject>subject 
 
 encdec_attention1:
     type: HandMultiheadEncdecAttention
@@ -1058,7 +1058,7 @@ encdec_attention1:
           valuemat: first>first third>third
 
         - docstring: subject-verb agreement
-          querymat: verb>xa
+          querymat: verb>xa helper>xa
           keymat: pro>xa
           valuemat: first>first third>third
 
