@@ -234,7 +234,7 @@
           layer = new HandRnn(
               {program: `
 semes: stop positive negative negation contrastive intensifier
-       lessener intensepunctuation 
+       lessener intensepunctuation
        xa xb xc xd xe ya yb yc yd ye
 
 lexicon:
@@ -396,7 +396,7 @@ examples:  # examples modified from https://github.com/cjhutto/vaderSentiment
       sentences as grammatical or not.
     </p>
 
-    
+
 
     <a class="marker" href="#section-4.1" id="section-4.1"><span>4.1</span></a>
     <h2>Pointwise Dense Layers</h2>
@@ -798,7 +798,7 @@ examples:
 
       figureAttention.addEventListener("ready", function () {
           const initTagAttention = figureAttention.querySelector("div");
-          let layer = new HandAttention(
+          let layer = new HandSelfAttention(
               {program: `semes: red green blue apple banana cherry durian
        det adjective noun conjunction xa
 keymat: adjective>xa
@@ -843,12 +843,288 @@ examples:
 
     <a class="marker" href="#section-4.6" id="section-4.6"><span>4.6</span></a>
     <h2>Transformer Attention Layers with Positional Encoding</h2>
-    
+
+
+
+    <a class="marker" href="#section-5" id="section-5"><span>5</span></a>
+    <h2>Grammaticality Transformer</h2>
+
+    <p>
+      In this section, we show a Transformer programmed to make
+      grammaticality judgments in English.
+    </p>
+
+    <d-figure id="figure-grammaticality" style="border: 1px solid black">
+      <svg id="figure-grammaticality-svg" width="500" height="200" />
+    </d-figure>
+    <script>
+      const figureGrammaticality = document.querySelector(
+          "d-figure#figure-grammaticality");
+      const initTagGrammaticality = document.createElement("div");
+      figureGrammaticality.appendChild(initTagGrammaticality);
+
+//       figureGrammaticality.addEventListener("ready", function () {
+//           const initTagGrammaticality = figureGrammaticality.querySelector("div");
+//           let layer = new HandTransformer(
+//               {program: `# English Grammaticality Classifier
+// semes:
+// examples:
+//     - she will eat a very small red apple
+// `,
+//                id: "figure-grammaticality",
+//                topLevel: true,
+//                document: document,
+//                container: initTagGrammaticality});
+//       });
+
+    </script>
+
+
+
+    <a class="marker" href="#section-6" id="section-6"><span>6</span></a>
+    <h2>Translation Transformer</h2>
+
+    <p>In this section, we show a Transformer programmed to translate
+      English to French. This network is solving a toy version of the
+      problem; the author has very little knowledge of French,
+      unfortunately.
+    </p>
+
+    <d-figure id="figure-translation" style="border: 1px solid black">
+      <svg id="figure-translation-svg" width="500" height="200" />
+    </d-figure>
+    <script>
+      const figureTranslation = document.querySelector(
+          "d-figure#figure-translation");
+      const initTagTranslation = document.createElement("div");
+      figureTranslation.appendChild(initTagTranslation);
+
+      figureTranslation.addEventListener("ready", function () {
+          const initTagTranslation = figureTranslation.querySelector("div");
+          let layer = new HandTransformer(
+              {program: `# English-to-French (Toy) Translation Transformer
+
+semes: subject mainverb dirobject indirobject first second third pro
+       noun verb adjective article male female shirt coat donut steak
+       salad apple human cat dog red green blue wearable edible eating
+       wearing weird filler sos eos elided helper xa xb xc xd xe xf xg
+       xh xi xj xk xl
+
+encoder_lexicon:
+    sos: +sos
+    eos: +eos
+    I: +noun +pro +first
+    he: +male +noun +pro +third
+    she: +female +noun +pro +third
+    ate: +eating +verb
+    wore: +wearing +verb
+    a: +article
+    an: +article
+    edible: +edible +adjective
+    wearable: +wearable +adjective
+    red: +red +adjective
+    green: +green +adjective
+    blue: +blue +adjective
+    shirt: +wearable +shirt +noun
+    coat: +wearable +coat +noun
+    apple: +edible +apple +noun
+    donut: +edible +donut +noun
+    steak: +edible +steak +noun
+    salad: +edible +salad +noun
+    human: +human +noun
+    cat: +cat +noun
+    dog: +dog +noun
+
+decoder_lexicon:
+    sos: +sos
+    eos: +eos
+    'je': +subject +first -elided +pro
+    'j\`': +subject +first +elided +pro
+    'il': +subject +male +third +pro
+    'elle': +subject +female +third +pro
+    'ai': +verb +helper +first
+    'a': +verb +helper +third
+    'mangé': +eating +verb +first +third
+    'portais': +wearing +verb +first
+    'portait': +wearing +verb +third
+    'un': +article +coat +dog +human +donut +steak
+    'une': +article +shirt +cat +apple +salad
+    'comestible': +edible +adjective
+    'portable': +wearable +adjective
+    'rouge': +red +adjective
+    'vert': +green +adjective
+    'bleu': +blue +adjective
+    'chemise': +shirt +noun
+    'manteau': +coat +noun
+    'pomme': +apple +noun
+    'beignet': +donut +noun
+    'steak': +steak +noun
+    'salade': +salad +noun
+    'humain': +human +noun
+    'chat': +cat +noun
+    'chien': +dog +noun
+
+
+architecture:
+    encoder:
+        - self_attention1
+    decoder:
+        - self_attention2
+        - encdec_attention1
+        - feedforward2
+
+self_attention1:
+    type: HandMultiheadSelfAttention
+    heads:
+        - docstring: modification
+          querypos: +1
+          keypos: 0
+          querymat: adjective>xa
+          keymat: noun>xa -verb>xa
+          valuemat: red>red green>green blue>blue edible>edible
+                    wearable>wearable
+        - docstring: role identification layer (kind of cheating here)
+          querymat: pro>xa noun>xb verb>xc
+          keymat: pro>xa noun>xb verb>xc
+          valuemat: pro>subject noun>dirobject verb>mainverb
+
+self_attention2:
+    type: HandMultiheadSelfAttention
+    heads:
+        - docstring: erase the embedding of the input word and shift
+                     towards next word
+
+          querymat: sos>sos eos>eos first>first second>second
+                    third>third pro>pro noun>noun verb>verb
+                    adjective>adjective article>article male>male
+                    female>female shirt>shirt coat>coat donut>donut
+                    steak>steak salad>salad apple>apple human>human
+                    cat>cat dog>dog red>red green>green blue>blue
+                    wearable>wearable edible>edible eating>eating
+                    wearing>wearing
+
+          keymat: sos>sos eos>eos first>first second>second
+                  third>third pro>pro noun>noun verb>verb
+                  adjective>adjective article>article male>male
+                  female>female shirt>shirt coat>coat donut>donut
+                  steak>steak salad>salad apple>apple human>human
+                  cat>cat dog>dog red>red green>green blue>blue
+                  wearable>wearable edible>edible eating>eating
+                  wearing>wearing
+
+          valuemat: sos>subject pro>verb pro>helper -pro>adjective
+                    2helper>verb verb>article article>noun
+                    noun>adjective 2adjective>eos -noun>verb -2sos>sos
+                    -2eos>eos -20first>first -2second>second
+                    -2third>third -2pro>pro -20noun>noun
+                    -20helper>helper -20adjective>adjective
+                    -2article>article -2male>male -2female>female
+                    -2shirt>shirt -2coat>coat -2donut>donut
+                    -2steak>steak -2salad>salad -2apple>apple
+                    -2human>human -2cat>cat -2dog>dog -2red>red
+                    -2green>green -2blue>blue -2wearable>wearable
+                    -2edible>edible -2eating>eating -2wearing>wearing
+                    -2subject>subject
+
+encdec_attention1:
+    type: HandMultiheadEncdecAttention
+    heads:
+        - docstring: most stuff
+          querymat: subject>xa verb>xb dirobject>xc noun>xc adjective>xd
+          keymat: subject>xa verb>xb dirobject>xc noun>xc adjective>xd
+          valuemat: first>first second>second third>third pro>pro
+                    noun>noun verb>verb adjective>adjective
+                    article>article male>male female>female
+                    shirt>shirt coat>coat donut>donut steak>steak
+                    salad>salad apple>apple human>human cat>cat
+                    dog>dog red>red green>green blue>blue
+                    wearable>wearable edible>edible eating>eating
+                    wearing>wearing
+
+        - docstring: article gender
+          querymat: article>xa
+          keymat: dirobject>xa noun>xa
+          valuemat: shirt>shirt coat>coat human>human cat>cat dog>dog
+                    donut>donut salad>salad steak>steak apple>apple
+
+        - docstring: helper verb
+          querymat: verb>xa
+          keymat: verb>xa
+          valuemat: eating>helper -6wearing>helper
+
+        - docstring: which verb
+          querymat: helper>xa
+          keymat: pro>xa
+          valuemat: first>first third>third
+
+        - docstring: subject-verb agreement
+          querymat: verb>xa
+          keymat: pro>xa
+          valuemat: first>first third>third
+
+        - docstring: whether to elide the e in je
+          querymat: subject>xa
+          keymat: verb>xa
+          valuemat: eating>elided -wearing>elided
+
+feedforward2:
+    type: HandFeedForward
+    docstring: honestly do not remember writing this one
+    mat1: adjective>xa -red>xa -blue>xa -green>xa -wearable>xa
+          -edible>xa edible>xb wearable>xc human>xb human>xc
+          article>article
+    bias1: -xb -xc
+    mat2: -article>verb -article>noun -article>pro
+          2article>article -2xb>pro -xa>adjective xa>eos
+    bias2: ''
+
+examples:
+    - he ate a blue apple
+    - he ate a dog
+    - he ate a green human
+    - he ate a steak
+    - he ate a wearable salad
+    - he ate an edible donut
+    - he wore a blue shirt
+    - he wore a blue steak
+    - he wore a green steak
+    - he wore a human
+    - he wore a wearable cat
+    - he wore an edible steak
+    - I ate a blue human
+    - I ate a red salad
+    - I ate a wearable donut
+    - I wore a blue human
+    - I wore a coat
+    - I wore a green donut
+    - I wore a red apple
+    - I wore a shirt
+    - I wore a wearable shirt
+    - I wore an edible shirt
+    - she ate a blue shirt
+    - she ate a green dog
+    - she ate a red dog
+    - she ate a wearable cat
+    - she ate an edible dog
+    - she wore a blue salad
+    - she wore a green salad
+    - she wore a steak
+    - she wore a wearable dog
+    - she wore an apple
+    - she wore an edible salad
+`,
+               id: "figure-translation",
+               topLevel: true,
+               document: document,
+               container: initTagTranslation});
+      });
+
+    </script>
+
 
 
     <a class="marker" href="#section-9" id="section-9"><span>9</span></a>
     <h2>Unused Stuff</h2>
-
     <p>As an example, consider the problem of classifying sentences
       as being sensible (e.g., "He saw the dog") or anomalous (e.g.,
       "The apple saw the dog"). There are many ways for a sentence to be

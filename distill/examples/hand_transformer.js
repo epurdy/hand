@@ -108,7 +108,7 @@ function str2vec(s, semes) {
         }
         let j = semes.indexOf(seme);
         if (j < 0) {
-            throw 'error: unknown seme';
+            throw 'error: unknown seme: ' + seme;
         }
         rv.set([j], rv.get([j]) + coeff);
     }
@@ -330,7 +330,9 @@ class HandFeedForward extends HandLayer {
             {x1: 200, y1: 15, x2:300, y2: 15},
             {x1: 300, y1: 15, x2:400, y2: 15},
         ];
-        this.recompute();
+        if (args.topLevel) {
+            this.recompute();
+        }
     }
 
     get_io_pairs() {
@@ -358,6 +360,27 @@ class HandFeedForward extends HandLayer {
         });
         return io_pairs;
     }
+
+    do_computation(vec_inputs) {
+        let bias1 = this.programObj.bias1;
+        let mat1 = this.programObj.mat1;
+        let bias2 = this.programObj.bias2;
+        let mat2 = this.programObj.mat2;
+        let vec_outputs = vec_inputs.toArray().map(
+            function (vec_input) {
+                return math.add(
+                    bias2,
+                    math.multiply(
+                        math.transpose(mat2),
+                        relu(
+                            math.add(
+                                bias1,
+                                math.multiply(
+                                    math.transpose(mat1),
+                                    vec_input)))));
+            });
+        return vec_outputs;
+    }
     
     recompute(event) {
         this.program = this.codeMirror.getValue();
@@ -379,9 +402,18 @@ class HandFeedForward extends HandLayer {
         }
         this.redraw();
     }
+
+    setProgramObj(obj, semes) {
+        this.programObj = {
+            mat1: str2mat(obj.mat1, semes),
+            bias1: str2vec(obj.bias1, semes),
+            mat2: str2mat(obj.mat2, semes),
+            bias2: str2vec(obj.bias2, semes),
+        };
+    }
 }
 
-class HandAttention extends HandLayer {
+class HandSelfAttention extends HandLayer {
     constructor(args) {
         super(args);
         this.blocks = [{x: 0, y:70, w:50, h:50, text: 'input'},
@@ -403,7 +435,167 @@ class HandAttention extends HandLayer {
             {x1: 125, y1: 165, x2:325, y2: 95},
             {x1: 325, y1: 95, x2:425, y2: 95},
         ];
-        this.recompute();
+
+
+        this.do_computation = this.do_computation.bind(this);
+        
+        if (args.topLevel) {
+            this.recompute();
+        }
+    }
+
+    get_io_pairs() {
+        let keymat = this.keymat;
+        let querymat = this.querymat;
+        let valuemat = this.valuemat;
+        let semes = this.semes;
+        let vec_inputs = this.inputs.map(x => tokens2vecs(x, this.semes));
+        let str_inputs = this.inputs.map(x => tokens2str(x, this.semes));
+        let words = this.inputs.map(x => tokens2words(x));
+
+        let keys = vec_inputs.map(x => math.multiply(x, keymat));
+        let queries = vec_inputs.map(x => math.multiply(x, querymat));
+        let values = vec_inputs.map(x => math.multiply(x, valuemat));
+        let attn = queries.map(
+            (q, i) => math.multiply(q, math.transpose(keys[i])));
+        attn = attn.map(m => softmax(m, {axis: 1}));
+        let vec_outputs = attn.map((m, i) => math.multiply(m, values[i]));
+
+        let str_outputs = vec_outputs.map(
+            function (x, i) {
+                let strs = math.map(x, function (y, idx) {
+                    if (y != 0) {
+                        if (y == 1) {
+                            return '+' + semes[idx[1]];
+                        }
+                        if (y == -1) {
+                            return '-' + semes[idx[1]];
+                        }
+                        return y + semes[idx[1]];
+                    }
+                    return '';
+                });
+                let arr = math.apply(strs, 1,
+                                  function (a) {
+                                      return a.join(' ').trim();
+                                  });
+                let arr2 = arr.map(function(a, j) {
+                    if (a == '') {
+                        return '';
+                    }
+                    return '[' + words[i][j] + ':' + a + ']';
+                });
+                return arr2.toArray().join(' ').trim();
+            }
+        );
+        let io_pairs = str_inputs.map(function(a, i) {
+            return [a, str_outputs[i]];
+        });
+        return io_pairs;
+    }
+
+    do_computation(vec_inputs) {
+        let querymat = this.programObj.querymat;
+        let keymat = this.programObj.keymat;
+        let valuemat = this.programObj.valuemat;
+        let queries = math.multiply(vec_inputs, querymat);
+        let keys = math.multiply(vec_inputs, keymat);
+        let values = math.multiply(vec_inputs, valuemat);
+        let attn = math.multiply(queries, math.transpose(keys));
+        attn = softmax(attn, {axis: 1});
+        let interpretant = math.multiply(attn, values);
+        return interpretant;
+    }
+
+    recompute(event) {
+        this.program = this.codeMirror ? this.codeMirror.getValue() : null;
+        let failed = true;
+        let doc = null;
+        try {
+            doc = jsyaml.load(this.program);
+            this.semes = doc.semes.split(/\s+/);
+            failed = false;
+        } catch {
+            console.log('parse failure');
+        }
+        if (!failed) {
+            this.keymat = str2mat(doc.keymat, this.semes);
+            this.querymat = str2mat(doc.querymat, this.semes);
+            this.valuemat = str2mat(doc.valuemat, this.semes);
+            this.inputs = doc.examples;
+        }
+        if (this.topLevel) {
+            this.redraw();
+        }
+    }
+
+    setProgramObj(obj, semes) {
+        this.programObj = {
+            docstring: obj.docstring,
+            querypos: obj.querypos || null,
+            keypos: obj.keypos || null,
+            querymat: str2mat(obj.querymat, semes),
+            keymat: str2mat(obj.keymat, semes),
+            valuemat: str2mat(obj.valuemat, semes),
+        }
+    }
+}
+
+
+class HandMultiheadSelfAttention extends HandLayer {
+    do_computation(vec_inputs) {
+        let querymat = this.querymat;
+        let keymat = this.keymat;
+        let valuemat = this.valuemat;
+        let return_values = vec_inputs.map(x => x);
+        for (const i in this.programObj.heads) {
+            let interpretants = this.programObj.heads[i].do_computation(
+                vec_inputs);
+            return_values = math.add(
+                return_values,
+                interpretants
+            );
+        }
+        return return_values;
+    }
+
+    setProgramObj(obj, semes) {
+        this.programObj = {
+            heads: obj.heads.map(
+                function (head) {
+                    head.type = 'HandSelfAttention'; 
+                    return createLayer(head, semes);
+                }
+            )
+        }
+    }
+}
+
+class HandEncdecAttention extends HandLayer {
+    constructor(args) {
+        super(args);
+        this.blocks = [{x: 0, y:70, w:50, h:50, text: 'input'},
+                       {x: 100, y:0, w:50, h:50, text: 'key'},
+                       {x: 100, y:70, w:50, h:50, text: 'query'},
+                       {x: 100, y:140, w:50, h:50, text: 'value'},
+                       {x: 200, y:70, w:50, h:50, text: 'attention'},
+                       {x: 300, y:70, w:50, h:50, text: 'interpretant'},
+                       {x: 400, y:70, w:50, h:50, text: 'output'},
+                      ];
+
+        this.wires = [
+            {x1: 0, y1: 95, x2:125, y2: 25},
+            {x1: 0, y1: 95, x2:125, y2: 95},
+            {x1: 0, y1: 95, x2:125, y2: 165},
+            {x1: 125, y1: 25, x2:225, y2: 95},
+            {x1: 125, y1: 95, x2:225, y2: 95},
+            {x1: 225, y1: 95, x2:325, y2: 95},
+            {x1: 125, y1: 165, x2:325, y2: 95},
+            {x1: 325, y1: 95, x2:425, y2: 95},
+        ];
+        if (args.topLevel) {
+            this.recompute();
+        }
     }
 
     get_io_pairs() {
@@ -420,8 +612,8 @@ class HandAttention extends HandLayer {
                 let queries = math.multiply(vec_input, querymat);
                 let values = math.multiply(vec_input, valuemat);
                 let attn = math.multiply(queries, math.transpose(keys));
-                let interpretant = math.multiply(attn, values);
                 attn = softmax(attn, {axis: 1})
+                let interpretant = math.multiply(attn, values);
                 return interpretant;
             }
         );
@@ -476,6 +668,56 @@ class HandAttention extends HandLayer {
             this.inputs = doc.examples;
         }
         this.redraw();
+    }
+
+    do_computation(vec_inputs, encoder_output) {
+        let querymat = this.programObj.querymat;
+        let keymat = this.programObj.keymat;
+        let valuemat = this.programObj.valuemat;
+        let keys = math.multiply(encoder_output, keymat);
+        let queries = math.multiply(vec_inputs, querymat);
+        let values = math.multiply(encoder_output, valuemat);
+        let attn = math.multiply(queries, math.transpose(keys));
+        attn = softmax(attn, {axis: 1})
+        let interpretant = math.multiply(attn, values);
+        return interpretant;
+    }
+    
+    setProgramObj(obj, semes) {
+        this.programObj = {
+            docstring: obj.docstring,
+            querypos: obj.querypos || null,
+            keypos: obj.keypos || null,
+            querymat: str2mat(obj.querymat, semes),
+            keymat: str2mat(obj.keymat, semes),
+            valuemat: str2mat(obj.valuemat, semes),
+        }
+    }
+}
+
+class HandMultiheadEncdecAttention extends HandLayer {
+    do_computation(vec_inputs, encoder_output) {
+        let return_values = vec_inputs.map(x => x);
+        for (const i in this.programObj.heads) {
+            let interpretants = this.programObj.heads[i].do_computation(
+                vec_inputs, encoder_output);
+            return_values = math.add(
+                return_values,
+                interpretants
+            );
+        }
+        return return_values;
+    }
+
+    setProgramObj(obj, semes) {
+        this.programObj = {
+            heads: obj.heads.map(
+                function (head) {
+                    head.type = 'HandEncdecAttention'; 
+                    return createLayer(head, semes);
+                }
+            )
+        }
     }
 }
 
@@ -573,3 +815,122 @@ class HandRnn extends HandLayer {
     }
 }
 
+class HandTransformer extends HandLayer {
+    constructor(args) {
+        super(args);
+        this.blocks = [{x: 0, y:70, w:50, h:50, text: 'input'},
+                       {x: 420, y:70, w:50, h:50, text: 'output'},
+                      ];
+
+        this.wires = [
+            {x1: 0, y1: 95, x2:425, y2: 95},
+        ];
+        this.recompute();
+    }
+
+    get_io_pairs() {
+        let semes = this.semes;
+        let encoder_lexicon = this.encoder_lexicon;
+        let decoder_lexicon = this.decoder_lexicon;
+        let inputs = this.inputs.map(x => x.split(/\s+/));
+        let vec_inputs = inputs.map(x => x.map(y => str2vec(encoder_lexicon[y],
+                                                            semes)));
+        let str_outputs = [];
+        for (const exid in inputs) {
+            let example = inputs[exid];
+            let encoder_outputs = vec_inputs[exid];
+            for (const i in this.encoder_stack) {
+                let layer = this.encoder_stack[i];
+                encoder_outputs = layer.do_computation(encoder_outputs);
+            }
+            let decoder_inputs = ['sos'];
+            let output = [];
+            for (let t=0; t<20; t++) {
+                let decoder_outputs = decoder_inputs.map(
+                    y => str2vec(decoder_lexicon[y], semes));
+                for (const i in this.decoder_stack) {
+                    let layer = this.decoder_stack[i];
+                    decoder_outputs = math.add(decoder_outputs,
+                        layer.do_computation(decoder_outputs,
+                                             encoder_outputs));
+                    console.log(layer,
+                                math.row(decoder_outputs, t));
+                }
+                let maxLogit = -1e12;
+                let chosen = null;
+                for (const word in decoder_lexicon) {
+                    let logit = math.dot(str2vec(decoder_lexicon[word],
+                                                 semes),
+                                         math.flatten(
+                                             math.row(decoder_outputs, t))
+                                        );
+                    console.log(word, logit,
+                                math.row(decoder_outputs, t));
+                    if (logit > maxLogit) {
+                        maxLogit = logit;
+                        chosen = word;
+                    }
+                }
+                decoder_inputs.push(chosen);
+                console.log('CHOSEN', t, chosen, maxLogit);
+                if (chosen == 'eos') {
+                    break;
+                }
+            }
+            decoder_inputs = decoder_inputs.splice(1);
+            if (decoder_inputs.indexOf('eos') >= 0) {
+                decoder_inputs = decoder_inputs.splice(
+                    0,
+                    decoder_inputs.indexOf('eos')
+                );
+            }
+            str_outputs.push(decoder_inputs.join(' '));
+        }
+        
+        let io_pairs = this.inputs.map(function(a, i) {
+            return [a, str_outputs[i]];
+        });
+        return io_pairs;
+    }
+    
+    recompute(event) {
+        this.program = this.codeMirror.getValue();
+        let failed = true;
+        let doc = null;
+        try {
+            doc = jsyaml.load(this.program);
+            this.semes = doc.semes.split(/\s+/);
+            failed = false;
+        } catch(err) {
+            console.log('parse failure', err.message);
+        }
+        if (!failed) {
+            this.architecture = doc.architecture;
+            this.encoder_stack = [];
+            this.decoder_stack = [];
+            for (const i in this.architecture.encoder) {
+                this.encoder_stack.push(
+                    createLayer(doc[this.architecture.encoder[i]], this.semes)
+                );
+            }
+            for (const i in this.architecture.decoder) {
+                this.decoder_stack.push(
+                    createLayer(doc[this.architecture.decoder[i]], this.semes)
+                );
+            }
+            this.encoder_lexicon = doc.encoder_lexicon;
+            this.decoder_lexicon = doc.decoder_lexicon;            
+            this.inputs = doc.examples;
+        }
+        this.redraw();
+    }
+}
+
+
+function createLayer(obj, semes) {
+    obj.topLevel = false;
+    let cls = eval(obj.type);
+    let rv = new cls({topLevel: false});
+    rv.setProgramObj(obj, semes)
+    return rv;
+}
