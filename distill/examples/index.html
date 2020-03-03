@@ -318,8 +318,8 @@ rnn_layer2:
     bias: -xc -xd -yc -yd -xe -ye
 
 dense1:
-    C: positive>positive negative>negative 2xa>positive 0.5xb>positive
-       ya>negative 0.5yb>negative xc>negative xd>negative yc>positive
+    C: positive>positive negative>negative 2xa>positive 0.25xb>positive
+       ya>negative 0.25yb>negative xc>negative xd>negative yc>positive
        yd>positive -2xc>positive -2xd>positive -2yc>negative
        -2yd>negative xe>negative ye>positive -xe>positive -ye>negative
     c: ''
@@ -525,79 +525,79 @@ examples:
       <tbody>
         <tr>
           <td>I</td>
-          <td>$$\langle\langle +nom +sg +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +nom +sg +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>you</td>
-          <td>$$\langle\langle +nom +sg +2nd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +nom +sg +second +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>he</td>
-          <td>$$\langle\langle +masc +nom +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +masc +nom +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>she</td>
-          <td>$$\langle\langle +fem +nom +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +fem +nom +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>it</td>
-          <td>$$\langle\langle +neut +sg +3rd +pro +expletive\rangle\rangle$$</td>
+          <td>$$\langle\langle +neut +sg +third +pro +expletive\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>me</td>
-          <td>$$\langle\langle +acc +sg +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +acc +sg +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>you</td>
-          <td>$$\langle\langle +sg +pl +2nd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +sg +pl +second +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>him</td>
-          <td>$$\langle\langle +masc +acc +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +masc +acc +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>her</td>
-          <td>$$\langle\langle +fem +acc +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +fem +acc +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>we</td>
-          <td>$$\langle\langle +nom +pl +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +nom +pl +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>they</td>
-          <td>$$\langle\langle +nom +pl +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +nom +pl +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>us</td>
-          <td>$$\langle\langle +acc +pl +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +acc +pl +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>them</td>
-          <td>$$\langle\langle +acc +pl +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +acc +pl +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>my</td>
-          <td>$$\langle\langle +gen +sg +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +gen +sg +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>our</td>
-          <td>$$\langle\langle +gen +pl +1st +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +gen +pl +first +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>his</td>
-          <td>$$\langle\langle +masc +gen +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +masc +gen +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>her</td>
-          <td>$$\langle\langle +fem +gen +acc +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +fem +gen +acc +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>its</td>
-          <td>$$\langle\langle +neut +gen +sg +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +neut +gen +sg +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>their</td>
-          <td>$$\langle\langle +gen +pl +3rd +pro\rangle\rangle$$</td>
+          <td>$$\langle\langle +gen +pl +third +pro\rangle\rangle$$</td>
         </tr>
         <tr>
           <td>meet</td>
@@ -608,7 +608,7 @@ examples:
         <tr>
           <td>meets</td>
           <td>$$\langle \langle +meet +verb
-            +3rdsg +agentlack
+            +thirdsg +agentlack
             +patientlack \rangle\rangle $$</td>
         </tr>
         <tr>
@@ -691,18 +691,18 @@ examples:
       </tr>
       <tr>
         <td rowspan="3" style="vertical-align: top">Person</td>
-        <td>$$1st$$</td>
-        <td>1st person</td>
+        <td>$$first$$</td>
+        <td>first person</td>
         <td>I/me/mine/myself</td>
       </tr>
       <tr>
-        <td>$$2nd$$</td>
-        <td>2nd person</td>
+        <td>$$second$$</td>
+        <td>second person</td>
         <td>you/your/yourself</td>
       </tr>
       <tr>
-        <td>$$3rd$$</td>
-        <td>3rd person</td>
+        <td>$$third$$</td>
+        <td>third person</td>
         <td>she/her/he/him/his/they/them/their</td>
       </tr>
       <tr>
@@ -886,11 +886,107 @@ examples:
     <a class="marker" href="#section-4.5" id="section-4.5"><span>4.5</span></a>
     <h2>Positional Encoding, Explained</h2>
 
+    <p>Here we explain the positional encoding of Transformer. The
+      positional encoding is made of of sines and cosines of different
+      frequencies. It turns out that this makes the embedding a
+      concatenation of a bunch of clock hands. This interpretation is
+      shown in the figure below. There are 7 clocks in the figure
+      below, one for each of the frequencies we are considering. Click
+      on any of the words (or their corresponding number) to see the
+      positional embedding corresponding to that word. Each word
+      receives the positional embedding that is the 14-dimensional
+      concatenation of the seven clock hands described as vectors.
+    </p>
+    
+    <d-figure id="figure-positional" style="border: 1px solid black">
+      <svg id="figure-positional-svg" width="500" height="200" />
+    </d-figure>
+    <script>
+      const figurePositional = document.querySelector(
+          "d-figure#figure-positional");
+      const initTagPositional = document.createElement("div");
+      figurePositional.appendChild(initTagPositional);
+
+      figurePositional.addEventListener("ready", function () {
+          const initTagPositonal = figurePositional.querySelector("div");
+          let animation = positionalAnimation(initTagPositonal);
+      });
+
+    </script>
+
+    <p>Why is this useful? It allows us to write weights that interact
+      with the positional embeddings without losing interpretability.
+      We do this as follows: first, we note that we can identify
+      rotation matrices that move each of the clock-hands forward by
+      the same amount that moving forward one word will move them. We
+      express this like so:
+      <d-code block="" language="markdown">
+        querypos: +1
+        keypos: +0
+      </d-code>
+      Here every word will pay attention to the word after it, because
+      the query is being advanced one word while the query is not. We
+      will put this to use in the next section.
+    </p>
 
 
     <a class="marker" href="#section-4.6" id="section-4.6"><span>4.6</span></a>
     <h2>Transformer Attention Layers with Positional Encoding</h2>
 
+    <p>Here we demonstrate the use of the positional embedding in a
+    self-attention layer by fixing the example from Section 4.4 to
+    associate the correct noun with the correct adjective.
+    </p>
+    
+    <d-figure id="figure-posattention" style="border: 1px solid black">
+      <svg id="figure-posattention-svg" width="500" height="200" />
+    </d-figure>
+    <script>
+      const figurePosAttention = document.querySelector(
+          "d-figure#figure-posattention");
+      const initTagPosAttention = document.createElement("div");
+      figurePosAttention.appendChild(initTagPosAttention);
+
+      figurePosAttention.addEventListener("ready", function () {
+          const initTagPosAttention = figurePosAttention.querySelector("div");
+          let layer = new HandSelfAttention(
+              {program: `semes: red green blue apple banana cherry durian
+       det adjective noun conjunction xa
+keypos: +1
+querypos: 0
+keymat: 10adjective>xa 10det>det 10conjunction>conjunction 10det>adjective
+querymat: 10noun>xa 10det>det 10conjunction>conjunction 10adjective>adjective
+valuemat: red>red green>green blue>blue
+examples:
+    - # apple gets red
+      - a: +det
+      - red: +adjective +red
+      - apple: +noun +apple
+    - # banana gets green
+      - a: +det
+      - green: +adjective +green
+      - banana: +noun +banana
+    - # cherry gets blue
+      - a: +det
+      - blue: +adjective +blue
+      - cherry: +noun +cherry
+    - # both nouns get both colors, which is incorrect
+      - a: +det
+      - red: +adjective +red
+      - cherry: +noun +cherry
+      - and: +conjunction
+      - a: +det
+      - blue: +adjective +blue
+      - durian: +noun +durian
+`,
+               id: "figure-posattention",
+               topLevel: true,
+               document: document,
+               container: initTagPosAttention});
+      });
+
+    </script>
+    
 
 
     <a class="marker" href="#section-5" id="section-5"><span>5</span></a>

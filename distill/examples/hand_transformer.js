@@ -935,3 +935,87 @@ function createLayer(obj, semes) {
     rv.setProgramObj(obj, semes)
     return rv;
 }
+
+
+function positionalAnimation(div) {
+    let data = ['She', 'will', 'eat', 'a', 'very', 'small', 'red', 'apple'];
+    let clocks = [
+        {speed:0.1,
+         color: 'red'},
+        {speed:0.15,
+         color: 'orange'},
+        {speed:0.2,
+         color: 'brown'},
+        {speed:0.25,
+         color: 'green'},
+        {speed:0.3,
+         color: 'blue'},
+        {speed:0.35,
+         color: 'purple'},
+        {speed:0.4,
+         color: 'black'},
+    ];
+
+    function selectWord(idx) {
+        d3.select('#figure-positional-svg')
+            .selectAll('text.words')
+            .data(data)
+            .classed('words', 'true')
+            .join('text')
+            .attr('x', (d, i) => 50 * (i + 1))
+            .attr('y', 100)
+            .attr('fill', function(d, i) {
+                if (idx == i) {
+                    return '#f00';
+                }
+                return '#000';
+            })
+            .text(d => d)
+            .on('click', function(d, i) {
+                selectWord(i);
+            })
+
+        d3.select('#figure-positional-svg')
+            .selectAll('text.numbers')
+            .data(data)
+            .classed('numbers', 'true')
+            .join('text')
+            .attr('x', (d, i) => 50 * (i + 1))
+            .attr('y', 130)
+            .attr('fill', function(d, i) {
+                if (idx == i) {
+                    return '#f00';
+                }
+                return '#000';
+            })
+            .text((d, i) => i)
+            .on('click', function(d, i) {
+                selectWord(i);
+            });
+        
+        d3.select('#figure-positional-svg')
+            .selectAll('circle.clocks')
+            .data(clocks)
+            .classed('clocks', 'true')
+            .join('circle')
+            .attr('cx', (d, i) => 60 * (i + 1))
+            .attr('cy', 50)
+            .attr('r', 20)
+            .attr('stroke', (d, i) => d.color)
+            .attr('fill', '#fff');
+
+        d3.select('#figure-positional-svg')
+            .selectAll('line.clocks')
+            .data(clocks)
+            .classed('clocks', 'true')
+            .join('line')
+            .attr('x1', (d, i) => 60 * (i + 1))
+            .attr('y1', 50)
+            .attr('x2', (d, i) => 60 * (i + 1) + 20 * math.cos(d.speed * idx))
+            .attr('y2', (d, i) => 50 + 20 * math.sin(d.speed * idx))
+            .attr('stroke', (d, i) => d.color)
+    }
+
+    selectWord(0);
+    
+}
