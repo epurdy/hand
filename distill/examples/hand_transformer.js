@@ -38,8 +38,63 @@ function softmax(x, options) {
     return rv;
 }
 
+function add_positional_embedding(vec_inputs, semes, clocks) {
+    let rv = [];
+    for (const i in vec_inputs) {
+        let vec_input = vec_inputs[i];
+        let len_input = math.size(vec_input).get([0]);
+        for (let j=0; j < len_input; j++) {
+            for (const k in clocks) {
+                let clock = clocks[k];
+                let cos = Math.cos(clock.speed * j);
+                let sin = Math.sin(clock.speed * j);
+                let kx = semes.indexOf(clock.semex);
+                let ky = semes.indexOf(clock.semey);
+                vec_input.set([j, kx], vec_input.get([j, kx]) + cos);
+                vec_input.set([j, ky], vec_input.get([j, ky]) -+sin);
+            }
+        }
+        rv.push(vec_input);
+    }
+    return rv;
+}
+
+function pos2mat(shift, semes, clocks) {
+    let rv = str2mat('', semes);
+    for (const i in clocks) {
+        let clock = clocks[i];
+        let cos = Math.cos(clock.speed * shift);
+        let sin = Math.sin(clock.speed * shift);
+        let jx = semes.indexOf(clock.semex);
+        let jy = semes.indexOf(clock.semey);
+        rv.set([jx, jx], rv.get([jx, jx]) + 10 * cos);
+        rv.set([jx, jy], rv.get([jx, jy]) - 10 *sin);
+        rv.set([jy, jx], rv.get([jy, jx]) + 10 * sin);
+        rv.set([jy, jy], rv.get([jy, jy]) + 10 * cos);
+    }
+    return rv;
+}
+
+function str2clocks(s) {
+    let clock_atoms = s.split(/[\s,]+/);
+    let clocks = [];
+    for (const i in clock_atoms) {
+        let atom = clock_atoms[i];
+        if (atom.match(/^[\s,]*$/)) {
+            continue;
+        }
+        let coeff_str = atom.match(/[+\-0-9\.]*/)[0];
+        let seme = atom.match(/[a-zA-Z]+/)[0];
+        let clock = {speed:Number(coeff_str),
+                     semex:seme + 'x',
+                     semey: seme + 'y'};
+        clocks.push(clock);
+    }
+
+    return clocks;
+}
+
 function tokens2vecs(tokens, semes) {
-    //let rv = math.zeros(tokens.length, semes.length);
     let rows = [];
     for (const i in tokens) {
         let token = tokens[i];
@@ -453,6 +508,10 @@ class HandSelfAttention extends HandLayer {
         let str_inputs = this.inputs.map(x => tokens2str(x, this.semes));
         let words = this.inputs.map(x => tokens2words(x));
 
+        vec_inputs = add_positional_embedding(vec_inputs,
+                                              this.semes,
+                                              this.clocks);
+        
         let keys = vec_inputs.map(x => math.multiply(x, keymat));
         let queries = vec_inputs.map(x => math.multiply(x, querymat));
         let values = vec_inputs.map(x => math.multiply(x, valuemat));
@@ -520,9 +579,22 @@ class HandSelfAttention extends HandLayer {
             console.log('parse failure');
         }
         if (!failed) {
+            this.clocks = str2clocks(doc.clocks ? doc.clocks : '');
             this.keymat = str2mat(doc.keymat, this.semes);
             this.querymat = str2mat(doc.querymat, this.semes);
             this.valuemat = str2mat(doc.valuemat, this.semes);
+            this.querypos = (doc.querypos !== undefined ?
+                             pos2mat(doc.querypos, this.semes, this.clocks) :
+                             null);
+            this.keypos = (doc.keypos !== undefined ?
+                           pos2mat(doc.keypos, this.semes, this.clocks) :
+                           null);
+            if (this.querypos) {
+                this.querymat = math.add(this.querymat, this.querypos);
+            }
+            if (this.keypos) {
+                this.keymat = math.add(this.keymat, this.keypos);
+            }
             this.inputs = doc.examples;
         }
         if (this.topLevel) {
@@ -854,8 +926,6 @@ class HandTransformer extends HandLayer {
                     decoder_outputs = math.add(decoder_outputs,
                         layer.do_computation(decoder_outputs,
                                              encoder_outputs));
-                    console.log(layer,
-                                math.row(decoder_outputs, t));
                 }
                 let maxLogit = -1e12;
                 let chosen = null;
@@ -865,15 +935,12 @@ class HandTransformer extends HandLayer {
                                          math.flatten(
                                              math.row(decoder_outputs, t))
                                         );
-                    console.log(word, logit,
-                                math.row(decoder_outputs, t));
                     if (logit > maxLogit) {
                         maxLogit = logit;
                         chosen = word;
                     }
                 }
                 decoder_inputs.push(chosen);
-                console.log('CHOSEN', t, chosen, maxLogit);
                 if (chosen == 'eos') {
                     break;
                 }
