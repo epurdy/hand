@@ -926,6 +926,7 @@ class HandTransformer extends HandLayer {
                     decoder_outputs = math.add(decoder_outputs,
                         layer.do_computation(decoder_outputs,
                                              encoder_outputs));
+                    console.log(layer, decoder_outputs);
                 }
                 let maxLogit = -1e12;
                 let chosen = null;
@@ -935,6 +936,7 @@ class HandTransformer extends HandLayer {
                                          math.flatten(
                                              math.row(decoder_outputs, t))
                                         );
+                    console.log(word, logit);
                     if (logit > maxLogit) {
                         maxLogit = logit;
                         chosen = word;

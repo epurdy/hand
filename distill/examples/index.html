@@ -916,18 +916,19 @@ examples:
     </script>
 
     <p>Why is this useful? It allows us to write weights that interact
-      with the positional embeddings without losing interpretability.
+      with the positional embeddings (which is necessary to make
+      position-dependent inferences) without losing interpretability.
       We do this as follows: first, we note that we can identify
       rotation matrices that move each of the clock-hands forward by
       the same amount that moving forward one word will move them. We
       express this like so:
       <d-code block="" language="markdown">
-        querypos: +1
-        keypos: +0
+        querypos: +0
+        keypos: +1
       </d-code>
-      Here every word will pay attention to the word after it, because
-      the query is being advanced one word while the query is not. We
-      will put this to use in the next section.
+      Here every word will pay attention to the word before it, because
+      the key is being advanced one word while the query is not. We
+      will put this positional embedding to use in the next section.
     </p>
 
 
@@ -992,7 +993,7 @@ examples:
 
 
     <a class="marker" href="#section-5" id="section-5"><span>5</span></a>
-    <h2>Grammaticality Transformer</h2>
+    <h2>Classification Transformer for Grammaticality</h2>
 
     <p>
       In this section, we show a Transformer programmed to make
@@ -1008,26 +1009,1739 @@ examples:
       const initTagGrammaticality = document.createElement("div");
       figureGrammaticality.appendChild(initTagGrammaticality);
 
-//       figureGrammaticality.addEventListener("ready", function () {
-//           const initTagGrammaticality = figureGrammaticality.querySelector("div");
-//           let layer = new HandTransformer(
-//               {program: `# English Grammaticality Classifier
-// semes:
-// examples:
-//     - she will eat a very small red apple
-// `,
-//                id: "figure-grammaticality",
-//                topLevel: true,
-//                document: document,
-//                container: initTagGrammaticality});
-//       });
+      figureGrammaticality.addEventListener("ready", function () {
+          const initTagGrammaticality = figureGrammaticality.querySelector("div");
+          let layer = new HandTransformer(
+              {program: `# English Grammaticality Classifier
+semes: weird unknownword
+
+    sos eos
+
+    period comma qmark emark colon semicolon squote dquote dash lparen
+    rparen interrobang
+
+    filler licensed reflic
+
+    early late
+
+    lastname name
+
+    subject mainverb dirobject indirobject
+    tense complementizer
+
+    pro det noun verb copula adjective adverb prep particle conj
+    helper modal sat num expletive
+
+    preterite plain imperative thirdsg infinitive pastpart ing
+
+    wh neg to sg pl massnoun nom acc gen masc fem neut first second
+    third reflexive reflexivelack possessive cognate
+
+    sgcheck plcheck checked
+
+    preverb postverb
+
+    nplack
+
+    agent experiencer theme patient source goal location recipient
+    instrument benefactive percept complement predicate
+
+    agentlack themelack experiencerlack perceptlack complementlack
+    goallack benefactivelack itlack patientlack speechlack
+
+    agentposs themeposs experiencerposs perceptposs complementposs
+    goalposs benefactiveposs patientposs speechposs
+
+    at in with
+
+    may have will shall can must ought need dare
+
+    be do go
+
+    up down very
+
+    who what when where why how which whither
+
+    here there
+
+    xa xb xc xd xe xf xg xh xi xj xk xl xm xn xo xp xq xr xs xt xu xv
+    xw xx xy xz
+
+    Ax Ay Bx By Cx Cy Dx Dy Ex Ey
+
+encoder_lexicon:
+    .: +period
+    ',': +comma
+    '!': +emark
+    '?': +qmark
+    "'s": +possessive +be +verb +thirdsg +copula +acc +pl +first +pro
+
+    'yes': +expletive
+
+    I: +nom +sg +first +pro
+    i: +nom +sg +first +pro
+    you: +nom +sg +pl +second +pro
+    he: +masc +nom +sg +third +pro
+    she: +fem +nom +sg +third +pro
+    it: +neut +sg +third +pro +expletive
+    me: +acc +sg +first +pro
+    him: +masc +acc +sg +third +pro
+    her: +fem +gen +acc +sg +third +pro
+    we: +nom +pl +first +pro
+    they: +nom +pl +third +pro
+    us: +acc +pl +first +pro
+    them: +acc +pl +third +pro
+    my: +gen +sg +first +pro
+    our: +gen +pl +first +pro
+    his: +masc +gen +sg +third +pro
+    its: +neut +gen +sg +third +pro
+    their: +gen +pl +third +pro
+
+    so: +pro +nom +sg
+
+    myself: +first +reflexive +sg +pro
+    ourselves: +first +reflexive +pl +pro
+    yourself: +second +reflexive +sg +pro
+    yourselves: +second +reflexive +pl +pro
+    himself: +third +reflexive +sg +masc +pro
+    herself: +third +reflexive +sg +fem +pro
+    itself: +third +reflexive +sg +neut +pro
+    themselves: +third +reflexive +pl +pro
+    oneself: +third +reflexive +sg +pro
+
+    a: +det +sg
+    an: +det +sg
+    the: +det
+    this: +det
+    that: +det
+
+    who: +who +wh +noun +human +det
+    what: +what +wh +noun +det
+    when: +when +wh
+    where: +where +wh
+    why: +why +wh
+    how: +how +wh
+    which: +which +wh +det
+    whither: +whither +wh
+    wherefore: +why +wh
+
+    here: +here +adverb
+    there: +there +adverb +expletive
+
+    not: +neg
+
+    at: +at +prep +nplack
+    down: +adverb +down +prep
+    in: +in +prep
+    to: +to +prep
+    up: +adverb +up +prep
+    very: +adverb +very
+    with: +with +prep
+
+    is: +be +verb +thirdsg +copula
+    be: +be +verb +plain +copula
+    was: +be +verb +preterite +copula +helper
+
+    did: +do +helper +verb +preterite +agentlack +themeposs
+    do: +do +helper +verb +plain +agentlack +themeposs
+    does: +do +helper +verb +thirdsg +agentlack +themeposs
+    have: +have +plain +helper +verb +agentposs +themeposs
+    has: +have +thirdsg +helper +verb +agentposs +themeposs
+
+    can: +can +plain +helper +modal
+    could: +can +preterite +helper +modal
+    may: +may +plain +thirdsg +helper +modal
+    might: +may +helper +modal
+    must: +must  +plain +helper +modal
+    shall: +shall +plain +helper +modal
+    should: +shall +preterite +helper +modal
+    will: +will +plain +thirdsg +helper +modal
+    would: +will +preterite +helper +modal
+    ought: +ought +modal +helper +modal
+    dare: +dare +modal +helper +modal
+
+    accuse: +verb +plain +agentlack +themelack
+    accused: +verb +preterite +agentlack +themelack
+    accuses: +verb +thirdsg +agentlack +themelack
+    appear: +verb +plain +agentlack +complementposs
+    appeared: +verb +preterite +agentlack +complementposs
+    appears: +verb +thirdsg +agentlack +complementposs
+    ate: +verb +preterite +agentlack +patientposs
+    beam: +verb +plain +agentlack
+    beamed: +verb +preterite +agentlack
+    beams: +verb +thirdsg +agentlack
+    bend: +verb +plain +agentlack +patientposs
+    bent: +verb +preterite +agentlack +patientposs
+    bends: +verb +thirdsg +agentlack +patientposs
+    bled: +verb +preterite +agentlack +patientposs
+    bleed: +verb +plain +agentlack +patientposs
+    bleeds: +verb +thirdsg +agentlack +patientposs
+    blew: +verb +preterite +agentlack +patientposs
+    blow: +verb +plain +agentlack +patientposs
+    blows: +verb +thirdsg +agentlack +patientposs
+    braid: +verb +plain +agentlack +patientlack
+    braided: +verb +preterite +agentlack +patientlack
+    braids: +verb +thirdsg +agentlack +patientlack
+    breathe: +verb +plain +agentlack
+    breathed: +verb +preterite +agentlack
+    breathes: +verb +thirdsg +agentlack
+    break: +verb +plain +agentlack
+    breaks: +verb +thirdsg +agentlack
+    broke: +verb +preterite +agentlack
+    brush: +verb +plain +agentlack +patientlack
+    brushed: +verb +preterite +agentlack +patientlack
+    brushes: +verb +thirdsg +agentlack +patientlack
+    carve: +verb +plain +agentlack +patientposs
+    carved: +verb +preterite +agentlack +patientposs
+    carves: +verb +thirdsg +agentlack +patientposs
+    chase: +verb +plain +agentlack +patientlack
+    chased: +verb +preterite +agentlack +patientlack
+    chases: +verb +thirdsg +agentlack +patientlack
+    chuckle: +verb +plain +agentlack
+    chuckled: +verb +preterite +agentlack
+    chuckles: +verb +thirdsg +agentlack
+    came: +verb +preterite +agentlack
+    come: +verb +plain +agentlack
+    comes: +verb +thirdsg +agentlack
+    cook: +verb +plain +agentlack +patientposs
+    cooked: +verb +preterite +agentlack +patientposs
+    cooks:  +verb +thirdsg +agentlack +patientposs
+    cough:  +verb +plain +agentlack +patientposs
+    coughed: +verb +preterite +agentlack +patientposs
+    coughs: +verb +thirdsg +agentlack +patientposs
+    cried: +verb +preterite +agentlack
+    cries: +verb +thirdsg +agentlack
+    cry: +verb +plain +agentlack
+    cut:  +verb +plain +preterite +agentlack +patientlack
+    cuts: +verb +thirdsg +agentlack +patientlack
+
+    dance: +verb +plain +agentlack +themeposs
+    danced: +verb +preterite +agentlack +themeposs
+    dances: +verb +thirdsg +agentlack +themeposs
+    depend: +verb +plain +agentlack
+    depended: +verb +preterite +agentlack
+    depends: +verb +thirdsg +agentlack
+    doze: +verb +plain +agentlack
+    dozed: +verb +preterite +agentlack
+    dozes: +verb +thirdsg +agentlack
+    eat: +verb +plain +agentlack +patientposs
+    eats: +verb +thirdsg +agentlack +patientposs
+    eaten: +verb +pastpart +agentlack +patientposs
+    exhale: +verb +plain +agentlack +patientposs
+    exhaled: +verb +preterite +agentlack +patientposs
+    exhales: +verb +thirdsg +agentlack +patientposs
+    fall: +verb +plain +agentlack
+    falls: +verb +thirdsg +agentlack
+    fear: +verb +plain +agentlack +themelack
+    feared: +verb +preterite +agentlack +themelack
+    fears: +verb +thirdsg +agentlack +themelack
+    feel: +verb +plain +agentlack +complementposs
+    feels: +verb +thirdsg +agentlack +complementposs
+    fell: +verb +preterite +agentlack
+    felt: +verb +preterite +agentlack +complementposs
+    find: +verb +plain +agentlack +themelack
+    finds: +verb +thirdsg +agentlack +themelack
+    forget: +verb +plain +agentlack +perceptposs
+    forgot: +verb +preterite +agentlack +perceptposs
+    forgets: +verb +thirdsg +agentlack +perceptposs
+    found: +verb +preterite +agentlack +themelack
+    flew:  +verb +preterite +agentlack
+    flies: +verb +thirdsg +agentlack
+    fly: +verb +plain +agentlack
+
+    gave:  +verb +preterite +agentlack +themeposs +goalposs
+    give:  +verb +plain +agentlack +themeposs +goalposs
+    gives: +verb +thirdsg +agentlack +themeposs +goalposs
+    go:  +verb +plain +agentlack
+    goes: +verb +thirdsg +agentlack
+    grunt:  +verb +plain +agentlack
+    grunted:  +verb +preterite +agentlack
+    grunts:  +verb +thirdsg +agentlack
+    hail:  +verb +plain +itlack
+    hailed:  +verb +preterite +itlack
+    hails: +verb +thirdsg +itlack
+    handed: +verb +preterite +agentlack +benefactivelack +themelack
+    hands: +verb +thirdsg +agentlack +benefactivelack +themelack
+    hit:  +verb +plain +preterite +agentlack +patientlack
+    hits: +verb +thirdsg +agentlack +patientlack
+    hunt: +verb +plain +agentlack +patientposs
+    hunted: +verb +preterite +agentlack +patientposs
+    hunting: +verb +ing +agentlack +patientposs
+    hunts:  +verb +thirdsg +agentlack +patientposs
+    inhale: +verb +plain +agentlack +patientposs
+    inhaled: +verb +preterite +agentlack +patientposs
+    inhales: +verb +thirdsg +agentlack +patientposs
+    intone: +verb +plain +agentlack +speechposs
+    intoned: +verb +preterite +agentlack +speechposs
+    intones: +verb +thirdsg +agentlack +speechposs
+
+    kick: +verb +plain +agentlack +patientlack
+    kicked: +verb +preterite +agentlack +patientlack
+    kicks: +verb +thirdsg +agentlack +patientlack
+    kill: +verb +plain +agentlack +patientlack
+    killed: +verb +preterite +agentlack +patientlack
+    kills: +verb +thirdsg +agentlack +patientlack
+    kiss: +verb +plain +agentlack +patientlack
+    kissed: +verb +preterite +agentlack +patientlack
+    kisses: +verb +thirdsg +agentlack +patientlack
+    knew: +verb +preterite +experiencerlack +themeposs
+    know: +verb +plain +experiencerlack +themeposs
+    knows: +verb +thirdsg +experiencerlack +themeposs
+    laugh: +verb +plain +agentlack +patientposs
+    laughed: +verb +preterite +agentlack +patientposs
+    laughs: +verb +thirdsg +agentlack +patientposs
+    leave:  +verb +plain +agentlack
+    leaves: +verb +thirdsg +agentlack
+    left:  +verb +preterite +agentlack
+    let:  +verb +plain +preterite +agentlack
+    like:  +verb +plain +agentlack +themelack
+    liked: +verb +preterite +agentlack +themelack
+    look:  +verb +plain +agentlack +themeposs
+    looked: +verb +preterite +agentlack +themeposs
+    looks: +verb +thirdsg +agentlack +themeposs
+    love:  +verb +plain +agentlack +themelack
+    loved: +verb +preterite +agentlack +themelack
+    loves: +verb +thirdsg +agentlack +themelack
+
+    meet:  +verb +plain +agentlack +patientlack
+    meets: +verb +thirdsg +agentlack +patientlack
+    mend:  +verb +plain +agentlack +patientlack
+    mended: +verb +preterite +agentlack +patientlack
+    mends:  +verb +thirdsg +agentlack +patientlack
+    met:  +verb +preterite +agentlack +patientlack
+    mumble: +verb +plain +agentlack
+    mumbled: +verb +preterite +agentlack
+    mumbles: +verb +thirdsg +agentlack
+    need:  +verb +plain +agentlack +themelack
+    needed: +verb +preterite +agentlack +themelack
+    needs: +verb +thirdsg +agentlack +themelack
+
+    praised: +verb +preterite +agentlack +patientlack
+    prefer: +verb +plain +experiencerlack +themelack
+    put: +verb +preterite +agentlack +themelack
+    rain: +verb +plain +itlack
+    rained: +verb +preterite +itlack
+    raining: +verb +ing +itlack
+    rains: +verb +thirdsg +itlack
+    ran: +verb +preterite +agentlack
+    rang: +verb +preterite +agentlack +patientposs
+    ring: +verb +plain +agentlack +patientposs
+    rings: +verb +thirdsg +agentlack +patientposs
+    rowed: +verb +preterite +agentlack
+    run: +verb +plain +agentlack
+    rung: +verb +pastpart +agentlack +patientposs
+
+    said: +verb +preterite +agentlack +complementlack
+    sang: +verb +preterite +agentlack +themeposs
+    sank: +verb +preterite +agentlack
+    saw: +verb +preterite +experiencerlack +perceptposs
+    see: +verb +plain +experiencerlack +perceptposs
+    send: +verb +plain +agentlack +themelack +benefactiveposs
+    sent: +verb +preterite +agentlack +themelack +benefactiveposs
+    shaved: +verb +preterite +agentlack
+    sing: +verb +plain +agentlack +themeposs
+    sink:  +verb +plain +agentlack
+    smile: +verb +plain +experiencerlack
+    smiled: +verb +preterite +experiencerlack
+    smiles: +verb +thirdsg +experiencerlack
+    sniff: +verb +plain +experiencerlack +patientposs
+    sniffed: +verb +preterite +experiencerlack +patientposs
+    sniffs: +verb +thirdsg +experiencerlack +patientposs
+    snow: +verb +plain +itlack
+    snowed: +verb +preterite +itlack
+    snows:  +verb +thirdsg +itlack
+    sung:  +verb +pastpart +agentlack +themeposs
+    sunk:  +verb +pastpart +agentlack
+    swim:  +verb +plain +agentlack
+    swims: +verb +thirdsg +agentlack
+    swam:  +verb +preterite +agentlack
+    swum:  +verb +pastpart +agentlack
+    talk:  +verb +plain +agentlack
+    talked:  +verb +preterite +agentlack
+    talks:  +verb +thirdsg +agentlack
+    tell:  +verb +plain +agentlack +complementposs
+    told:  +verb +preterite +agentlack +complementposs
+    tried: +verb +preterite +agentlack +complementposs
+    try:  +verb +plain +agentlack +complementposs
+
+    wail: +verb +plain +agentlack
+    wailed: +verb +preterite +agentlack
+    wails:  +verb +thirdsg +agentlack
+    walk:  +verb +plain +agentlack
+    walked: +verb +preterite +agentlack
+    walks:  +verb +thirdsg +agentlack
+    waltz:  +verb +plain +agentlack
+    waltzed: +verb +preterite +agentlack
+    waltzes: +verb +thirdsg +agentlack
+    wander:  +verb +plain +agentlack
+    want:  +verb +plain +agentlack +themelack
+    wash:  +verb +plain +agentlack +themelack +benefactiveposs
+    washed: +verb +preterite +agentlack +themelack +benefactiveposs
+    washes: +verb +thirdsg +agentlack +themelack +benefactiveposs
+    went:  +verb +preterite +agentlack
+    wink:  +verb +plain +agentlack +patientposs
+    winked: +verb +preterite +agentlack +patientposs
+    winks:  +verb +thirdsg +agentlack +patientposs
+    wonder: +verb +plain +agentlack +themeposs
+    wondered: +verb +preterite +agentlack +themeposs
+    wonders:  +verb +thirdsg +agentlack +themeposs
+    wore:  +verb +preterite +agentlack +themelack
+    yawn:  +verb +plain +experiencerlack
+    yawned: +verb +preterite +experiencerlack
+    yawns:  +verb +thirdsg +experiencerlack
+
+    big:  +adjective
+    black: +adjective
+    blue: +adjective
+    clever: +adjective
+    cold: +adjective
+    cool: +adjective
+    cyan: +adjective
+    edible: +adjective
+    green:  +adjective
+    honest: +adjective
+    hot: +adjective
+    magenta: +adjective
+    orange: +adjective
+    proud:  +adjective
+    purple:  +adjective
+    red:  +adjective
+    sick: +adjective
+    small: +adjective
+    warm:  +adjective
+    wearable: +adjective
+    white: +adjective
+    yellow: +adjective
+
+    apple: +noun +sg
+    apples: +noun +pl
+    bear: +noun +sg
+    bears: +noun +pl
+    bell:  +noun +sg
+    bells: +noun +pl
+    bird:  +noun +sg
+    birds: +noun +pl
+    blood: +noun +massnoun
+    boat:  +noun +sg
+    boats: +noun +pl
+    book:  +noun +sg
+    books: +noun +pl
+    bread: +noun +massnoun
+    boy:  +male +noun +sg
+    boys: +male +noun +sg
+    car:  +noun +sg
+    cars: +noun +pl
+    cat:  +noun +sg
+    cats: +noun +pl
+    child: +noun +sg
+    children: +noun +pl
+    coat: +noun +sg
+    coats: +noun +pl
+    cup:  +noun +sg
+    cups: +noun +pl
+    day:  +noun +sg
+    days: +noun +pl
+    dirt: +noun +massnoun
+    dog:  +noun +sg
+    dogs: +noun +pl
+    donut: +noun +sg
+    donuts: +noun +pl
+    door: +noun +sg
+    doors: +noun +pl
+    fence: +noun +sg
+    fences: +noun +pl
+    fool:  +noun +sg
+    fools: +noun +pl
+    fruit: +noun +massnoun
+    girl:  +female +noun +sg
+    girls: +female +noun +sg
+    horse: +noun +sg
+    horses: +noun +pl
+    human:  +noun +sg
+    humans: +noun +pl
+    lion: +noun +sg
+    lioness: +female +noun +sg
+    lions:  +noun +pl
+    man:  +male +noun +sg
+    men:  +male +noun +pl
+    money: +noun +massnoun
+    pig:  +noun +sg
+    pigs: +noun +pl
+    rod:  +noun +sg
+    rods:  +noun +pl
+    salad: +noun +sg
+    salads: +noun +pl
+    sheep:  +noun +sg +pl
+    ship:  +noun +sg
+    ships: +noun +pl
+    shirt: +noun +sg
+    shirts: +noun +pl
+    song:  +noun +sg +cognate
+    songs: +noun +pl +cognate
+    star:  +noun +sg
+    stars: +noun +pl
+    steak: +noun +sg
+    steaks: +noun +pl
+    tiger:  +noun +sg
+    tigers: +noun +pl
+    telescope: +noun +sg
+    telescopes: +noun +pl
+    sugar:  +noun +massnoun
+    woman:  +female +noun +sg
+    women:  +female +noun +pl
+
+    aaron: +male +name
+    abernathy: +lastname
+    abraham: +male +name
+    achilles: +male +name
+    adam: +male +name
+    alan: +male +name
+    alex: +male +name
+    alexandra: +female +name
+    alexis: +female +name
+    ali: +male +female +name
+    alice: +female +name
+    alina: +female +name
+    alison: +female +name
+    aliza: +female +name
+    alyssa: +female +name
+    amanda: +female +name
+    amy: +female +name
+    andrew: +male +name
+    andropov: +lastname +name
+    andy: +male +name
+    angel: +male +name
+    angela: +female +name
+    angleton: +lastname +name
+    anita: +female +name
+    ann: +female +name
+    anna: +female +name
+    annabelle: +female +name
+    anne: +female +name
+    annie: +female +name
+    anson: +male +name
+    arsalan: +male +name
+    art: +male +name
+    arthur: +male +name
+    audrey: +female +name
+    ayala: +female +name
+    baba: +female +name
+    barbara: +female +name
+    barnes: +lastname +name
+    barry: +male +name
+    bates: +lastname +name
+    becky: +female +name
+    belinda: +female +name
+    ben: +male +name
+    bertram: +male +lastname +name
+    beth: +female +name
+    betsy: +female +name
+    bettina: +female +name
+    betty: +female +name
+    bill: +male +name
+    bingley: +lastname +name
+    blackwell: +lastname +name
+    bloomingdale: +lastname +name
+    bobbie: +female +name
+    bourg: +lastname +name
+    brad: +male +name
+    bradley: +male +name
+    brandon: +male +name
+    brenda: +female +name
+    brian: +male +name
+    briana: +female +name
+    bruce: +male +name
+    buffy: +female +name
+    caesar: +male +name
+    carl: +male +name
+    carla: +female +name
+    carlos: +male +name
+    carmen: +female +name
+    carolyn: +female +name
+    carrie: +female +name
+    cathy: +female +name
+    catriona: +female +name
+    cedric: +male +name
+    celia: +female +name
+    chelswu: +female +name
+    cheney: +lastname +name
+    cher: +female +name
+    cheryl: +female +name
+    chris: +male +name
+    christina: +female +name
+    christine: +female +name
+    churchill: +lastname +name
+    ciaran: +female +name
+    claus: +lastname +male +name
+    cohen: +lastname +name
+    colson: +lastname +name
+    connie: +female +name
+    cornelia: +female +name
+    cornelius: +male +name
+    crawford: +lastname +name
+    curtis: +male +name
+    cynthia: +female +name
+    d'arcy: +lastname +name
+    damon: +male +name
+    dan: +male +name
+    dana: +female +name
+    daniel: +male +name
+    danny: +male +name
+    dante: +male +name
+    darin: +male +name
+    dashwood: +lastname +name
+    dave: +male +name
+    david: +male +name
+    deirdre: +female +name
+    dennis: +male +name
+    dexter: +male +name
+    diana: +female +name
+    dina: +female +name
+    donny: +male +name
+    dorothy: +female +name
+    dot: +female +name
+    doug: +male +name
+    edmund: +male +name
+    edna: +female +name
+    eleanor: +female +name
+    eliza: +female +name
+    elizabeth: +female +name
+    ellen: +female +name
+    elliott: +male +name
+    elmer: +male +name
+    eloise: +female +name
+    elton: +lastname +name
+    emily: +female +name
+    emma: +female +name
+    enrico: +male +name
+    eric: +male +name
+    erica: +female +name
+    erich: +male +name
+    erik: +male +name
+    erika: +female +name
+    erin: +female +name
+    ernie: +male +name
+    ethel: +female +name
+    evan: +male +name
+    fabio: +male +name
+    fairfax: +lastname +name
+    faustina: +female +name
+    felix: +male +name
+    ferdinand: +male +name
+    feynman: +male +name
+    fido: +male +name
+    fiona: +female +name
+    fitial: +male +name
+    flo: +female +name
+    flora: +female +name
+    florence: +female +name
+    floyd: +male +name
+    frances: +female +name
+    francis: +male +name
+    fraser: +male +name
+    fred: +male +name
+    frieda: +female +name
+    gabrielle: +female +name
+    gary: +male +name
+    george: +male +name
+    georgina: +female +name
+    gerry: +male +female +name
+    gillian: +female +name
+    gloria: +female +name
+    goldstein: +lastname +name
+    gomez: +lastname +name
+    gordie: +male +name
+    gordon: +male +name
+    greg: +male +name
+    gus: +male +name
+    gwen: +female +name
+    haim: +male +name
+    hanna: +female +name
+    harold: +male +name
+    harriet: +female +name
+    harry: +male +name
+    hattie: +female +name
+    heidi: +female +name
+    hein: +lastname +name
+    helen: +female +name
+    henri: +male +name
+    henry: +male +name
+    hermione: +female +name
+    heydrich: +lastname +name
+    hilary: +male +female +name
+    hilda: +female +name
+    igor: +male +name
+    imogen: +female +name
+    irma: +female +name
+    isabel: +female +name
+    ivan: +male +name
+    jack: +male +name
+    jackie: +female +name
+    jaime: +male +name
+    jake: +male +name
+    jane: +female +name
+    janet: +female +name
+    jason: +male +name
+    jasper: +male +name
+    jean: +male +female +name
+    jeane: +female +name
+    jeeves: +lastname +name
+    jeff: +male +name
+    jen: +female +name
+    jennie: +female +name
+    jennifer: +female +name
+    jenny: +female +name
+    jeremy: +male +name
+    jerry: +male +name
+    jessica: +female +name
+    jila: +female +name
+    jill: +female +name
+    jim: +male +name
+    joan: +female +name
+    joao: +male +name
+    joe: +male +name
+    johann: +male +name
+    john: +male +name
+    johnny: +male +name
+    jones: +lastname +sg +name
+    joneses: +lastname +pl +name
+    jorge: +male +name
+    jose: +male +name
+    josh: +male +name
+    joshua: +male +name
+    josé: +male +name
+    juan: +male +name
+    judy: +female +name
+    julia: +female +name
+    julie: +female +name
+    juliet: +female +name
+    julius: +male +name
+    justin: +male +name
+    kanaka: +male +female +name
+    kanake: +male +female +name
+    kane: +lastname +name
+    kariuki: +male +name
+    karl: +male +name
+    karla: +female +name
+    kate: +female +name
+    katherine: +female +name
+    kathleen: +female +name
+    kathy: +female +name
+    keiko: +female +name
+    ken: +male +name
+    kenji: +male +name
+    kenny: +male +name
+    kerry: +lastname +name
+    kevin: +male +name
+    kim: +female +male +name
+    kimberly: +female +name
+    kimea: +male +female +name
+    knightley: +lastname +name
+    lacey: +lastname +name
+    larry: +male +name
+    laurel: +male +female +name
+    leah: +female +name
+    lee: +male +name
+    leigh: +female +name
+    lenny: +male +name
+    leona: +female +name
+    leslie: +female +name
+    lillie: +female +name
+    lilly: +female +name
+    lily: +female +name
+    linda: +female +name
+    lisa: +female +name
+    lito: +male +name
+    lopez: +lastname +name
+    lora: +female +name
+    lorenzo: +male +name
+    lou: +male +female +name
+    louis: +male +name
+    louisa: +female +name
+    louise: +female +name
+    lucie: +male +name
+    lucille: +female +name
+    lucy: +female +name
+    lukas: +male +name
+    lynn: +female +name
+    madeleine: +female +name
+    maggie: +female +name
+    maisie: +female +name
+    makiko: +female +name
+    manami: +male +female +name
+    manuel: +male +name
+    marcia: +female +name
+    marco: +male +name
+    marg: +female +name
+    margaret: +female +name
+    marge: +female +name
+    maria: +female +name
+    marianne: +female +name
+    marie: +female +name
+    marilyn: +female +name
+    marion: +male +name
+    mark: +male +name
+    marlene: +female +name
+    martha: +female +name
+    martin: +male +name
+    martina: +female +name
+    mary: +female +name
+    matt: +male +name
+    matthew: +male +name
+    maureen: +female +name
+    maurice: +male +name
+    max: +male +name
+    maxime: +female +name
+    maxine: +female +name
+    medea: +female +name
+    megan: +female +name
+    melanie: +female +name
+    mele: +female +name
+    melvin: +male +name
+    mercedes: +female +name
+    merv: +male +name
+    meryl: +female +name
+    michael: +male +name
+    michelle: +female +name
+    midori: +female +name
+    mika: +female +name
+    mike: +male +name
+    milena: +female +name
+    millie: +female +name
+    mingxing: +male +name
+    minjoon: +male +name
+    minsoo: +male +name
+    mira: +female +name
+    miriam: +female +name
+    misha: +male +name
+    mona: +female +name
+    monica: +female +name
+    mort: +male +name
+    morty: +male +name
+    moya: +male +name
+    musgrave: +lastname +name
+    myra: +female +name
+    myrna: +female +name
+    myron: +male +name
+    nadya: +female +name
+    nate: +male +name
+    nathan: +male +name
+    ngugi: +male +name
+    nora: +female +name
+    norvin: +male +name
+    ohoso: +name
+    olivia: +female +name
+    onegin: +lastname +name
+    otto: +male +name
+    owen: +male +name
+    pamela: +female +name
+    pat: +female +male +name
+    paul: +male +name
+    paula: +female +name
+    pearl: +female +name
+    pelé: +male +name
+    pete: +male +name
+    peter: +male  +name
+    philippa: +female +name
+    phillip: +male +name
+    phineas: +male +name
+    phyllis: +female +name
+    pierre: +male +name
+    pietro: +male +name
+    priscilla: +female +name
+    pugsley: +male +name
+    raffi: +male +name
+    raiza: +name
+    ram: +male +name
+    # ran: +female +name
+    rasoa: +name
+    reg: +male +name
+    reggie: +male +name
+    richard: +male +name
+    rina: +female +name
+    rita: +female +name
+    robert: +male +name
+    rodney: +male +name
+    roger: +male +name
+    ron: +male +name
+    ronald: +male +name
+    ronnie: +male +name
+    rooke: +lastname +name
+    rory: +male +name
+    rose: +female +name
+    rosemary: +female +name
+    rosie: +female +name
+    rudy: +male +name
+    ryan: +male +name
+    sachiko: +female +name
+    sally: +female +name
+    sam: +male +name
+    samantha: +female +name
+    sammy: +male +name
+    sandra: +female +name
+    sandy: +female +name
+    sara: +female +name
+    sarah: +female +name
+    sasha: +male +name
+    scarlet: +female +name
+    seamus: +male +name
+    sean: +male +name
+    selena: +female +name
+    selina: +female +name
+    sharon: +female +name
+    sheila: +female +name
+    shelly: +female +name
+    shirley: +female +name
+    simmons: +lastname +name
+    siobhan: +female +name
+    sita: +female +name
+    smith: +lastname +sg +name
+    stacy: +female +name
+    stalin: +lastname +name
+    stephan: +male +name
+    steve: +male +name
+    strang: +male  +name
+    stuart: +male +name
+    sue: +female +name
+    susan: +female +name
+    susanne: +female +name
+    susi: +female +name
+    susie: +female +name
+    suzie: +female +name
+    swansong: +lastname +name
+    sylvia: +female +name
+    tamara: +female +name
+    tami: +female +name
+    taroo: +male +name
+    tasha: +female +name
+    tatiana: +female +name
+    terry: +female +male +name
+    tessa: +female +name
+    toni: +female +name
+    tony: +male +name
+    traci: +female +name
+    tracy: +female +male +name
+    vera: +female +name
+    vivian: +female +name
+    vivien: +female +name
+    waldo: +male +name
+    walter: +male +name
+    wanda: +female +name
+    waraka: +male +name
+    wendy: +female +name
+    wentworth: +lastname +name
+    wickham: +lastname +name
+    wildwood: +lastname +name
+    willa: +female +name
+    william: +male +name
+    willoughby: +lastname +name
+    willy: +male +name
+    wilma: +female +name
+    winifred: +female +name
+    winston: +male +name
+    woodhouse: +lastname +name
+    xander: +male +name
+    xavea: +name
+    yassin: +male +name
+    yates: +lastname +name
+    yeltsin: +lastname +name
+    yoonjin: +male +name
+    yuko: +female +name
+    zeke: +male +name
+    zhangsan: +name
+    zimmerman: +lastname +name
+    e.: +male +name
+
+    sos: sos
+    eos: eos
+
+decoder_lexicon:
+    GRAMMATICAL: -weird +nom
+    UNGRAMMATICAL: +weird +acc
+    sos: sos
+    eos: eos
+
+architecture:
+    encoder:
+        - self_attention0
+    decoder:
+        - decoder_sa0
+        - decoder_eda0
+        - decoder_ff0
+
+decoder_sa0: # 'decoder'
+    type: HandMultiheadSelfAttention
+    heads:
+        - docstring: catch GRAMMATICAL and map to eos
+
+          querymat: 10nom>xa 10sos>xb
+
+          keymat: 10nom>xa 10sos>xb
+
+          valuemat: 100nom>eos -sos>eos
+
+        - docstring: catch UNGRAMMATICAL and map to eos
+
+          querymat: 10acc>xa 10sos>xb
+
+          keymat: 10acc>xa 10sos>xb
+
+          valuemat: 100acc>eos -sos>eos
+
+decoder_eda0: # 'decoder'
+    type: HandMultiheadEncdecAttention
+    heads:
+        - docstring: find weird anywhere in the input and map to
+                     UNGRAMMATICAL
+
+          querymat: sos>xa
+
+          keymat: weird>xa
+
+          valuemat: weird>weird
+
+decoder_ff0: # 'decoder'
+    type: HandFeedForward
+    docstring: map lack of weird to GRAMMATICAL, also suppress sos
+    mat1: weird>weird
+    bias1: -10sos
+    mat2: 2weird>weird
+    bias2: -weird -10sos
+
+self_attention0: # syntax layer 0 self-attention
+    type: HandMultiheadSelfAttention
+    heads:
+        - docstring: Modification layer. Specifically pairs of the
+                     form Q K, where Q comes before K and Q modifies
+                     K. Q must be an adjective or an adverb to use
+                     this rule.
+
+          querypos: +1
+          keypos: 0
+
+          querymat: adjective>xa adverb>xb adverb>xc adverb>xd verb>xe
+                    noun>xe det>xe filler>xe pro>xe
+
+          keymat: noun>xa verb>xb adjective>xc adverb>xd filler>xe
+
+          valuemat:
+              noun>licensed verb>licensed adverb>licensed
+              adjective>licensed
+
+#     H2det:
+#         docstring: Q K, where K modifies Q
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             K: +1
+#             Q: 0
+
+#         x1: # noun modifies determiner: the dog
+#             Q: det
+#             K: noun
+
+#         x2: # everything else hits filler
+#             Q: verb noun filler pro
+#             K: filler filler filler
+
+#         int: eyenoun sg>sg pl>pl cognate>cognate
+
+#     H2:
+#         docstring: Q K, where K modifies Q
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             K: +1
+#             Q: 0
+
+#         x2: # adverb modifies verb: write quickly
+#             Q: verb
+#             K: adverb
+
+#         x3: # nominal phrase modifies preposition: in Paris
+#             Q: prep
+#             K: det pro
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler adjective noun adverb det pro
+
+#         int: eyenoun eyeadv
+
+#     H2a:
+#         docstring: K Q, where Q modifies K
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             K: 0
+#             Q: +1
+
+#         x1: # noun modifies determiner: K[the] Q[dog]
+#             K: det
+#             Q: noun
+
+#         x2: # adverb modifies verb: K[write] Q[quickly]
+#             K: verb
+#             Q: adverb
+
+#         x3: # nominal phrase modifies preposition: K[in] Q[Paris]
+#             K: prep
+#             Q: det
+
+#         x5: # everything else hits filler
+#             Q: filler period noun adjective adverb
+#             K: filler
+
+#         int: det>licensed verb>licensed adverb>licensed
+#              adjective>licensed prep>licensed det>-det
+
+#     Hinfinitive:
+#         docstring: Q[to] boldly K[go]
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             Q: to
+#             K: verb plain plain -3rdsg -preterite
+
+#         x2:
+#             K: filler
+#             Q: filler noun verb det pro adverb adjective
+
+#         int: verb>infinitive eyeverb
+
+#     Hinfinitiveanti:
+#         docstring: K[to] boldly Q[go]    
+#         params:
+#             future_mask: True
+
+#         pos:
+#             K: 0
+#             Q: +1
+
+#         x1:
+#             K: to
+#             Q: verb plain plain -3rdsg -preterite
+
+#         x2:
+#             K: filler
+#             Q: filler noun verb det pro adverb adjective
+
+#         int: to>-agentlack to>-experiencerlack to>licensed
+#              to>-agentposs
+
+#     H20:
+#         docstring: adverb(Q) must go after dirobject or before verb,
+#                    so mark the ones before the verb(K) now
+         
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             Q: adverb -noun -pro
+#             K: verb
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun det pro adjective
+
+#         int: verb>preverb
+
+# FF0: # syntax layer 0 feed-forward
+#     docstring: Promote plurals and names to determiners since they
+#                don't need a determiner. Mark most classes as
+#                unlicensed until proven otherwise.
+
+#     det:
+#         x1: name | lastname
+#         x2: pl | massnoun
+
+#     sg:
+#         x1: name | lastname
+
+#     mat1: noun>noun pro>pro helper>helper det>det prep>prep neg>neg
+#           period>period neg>neg verb>verb
+
+#     mat2: noun>-licensed pro>-licensed helper>-licensed det>-licensed
+#           prep>-licensed neg>-licensed period>filler verb>-licensed
+
+#           period>filler
+
+# SA1: # syntax layer 1 self-attention
+#     H1:
+#         docstring: nominal phrases jockey for position
+#         params:
+#             future_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             K: pro det
+#             Q: pro det
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: '' #pro>late det>late
+
+# FF1: '' # syntax layer 1 feed-forward
+
+# SA2: # syntax layer 2 self-attention
+#     H1:
+#         docstring: dirobject wipes out themelacks
+
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             K: pro det infinitive acc -nom -subject -agent -experiencer
+#             Q: themelack themeposs
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: pro>-themelack det>-themelack infinitive>-themelack
+#              pro>-themeposs det>-themeposs infinitive>-themeposs
+
+#     H2:
+#         docstring: dirobject wipes out perceptlacks
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             K: pro det acc -nom -subject -agent -experiencer
+#             Q: perceptlack perceptposs
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: pro>-perceptlack det>-perceptlack
+#              pro>-perceptposs det>-perceptposs
+
+#     H3:
+#         docstring: dirobject wipes out patientlacks
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             K: pro det acc -nom -subject -agent -experiencer
+#             Q: patientlack patientposs
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: pro>-patientlack det>-patientlack
+#              pro>-patientposs det>-patientposs
+
+#     H4:
+#         docstring: dirobject wipes out complementlacks
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             K: pro det acc -nom -subject -agent -experiencer
+#             Q: complementlack complementposs
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: pro>-complementlack det>-complementlack
+#              pro>-complementposs det>-complementposs
+
+#     Hprep:
+#         docstring: pp(Q) attaches to the verb(K)
+#         pos:
+#             Q: +1
+#             K: 0
+
+#         x1:
+#             Q: prep -verb -pro -det -infinitive -infinitive
+#             K: verb
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective infinitive
+
+#         int: verb>licensed
+
+#     Hprepanti:
+#         docstring: pp(K) attaches to the verb(Q)
+#         pos:
+#             K: +1
+#             Q: 0
+
+#         x1:
+#             K: prep -infinitive -infinitive
+#             Q: verb
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: eyeprep
+
+
+#     HmarkDO:
+#         docstring: mark the dirobject as
+#                    theme/percept/patient/complement, and license
+
+#         params:
+#             normaxis: 0
+#             future_mask: True
+
+#         pos:
+#             K: 0
+#             Q: +2
+
+#         x1:
+#             K: verb
+#             Q: pro det infinitive acc acc acc -nom -nom -nom -gen -gen -gen
+
+#         x2:
+#             K: verb
+#             Q: late
+
+#         x3:
+#             K: speechposs
+#             Q: -fruit -fruit -fruit -fruit
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: themelack>theme perceptlack>percept themeposs>theme
+#              perceptposs>percept patientposs>patient
+#              patientlack>patient complementlack>complement
+#              themelack>licensed perceptlack>licensed themeposs>licensed
+#              perceptposs>licensed patientposs>licensed
+#              patientlack>licensed complementlack>licensed
+
+#              speechlack>dirobject speechposs>dirobject
+#              patientlack>dirobject patientposs>dirobject
+#              themelack>dirobject themeposs>dirobject
+#              perceptlack>dirobject perceptposs>dirobject
+#              complementlack>dirobject complementposs>dirobject
+
+#     HmarkPRED:
+#         docstring: mark the predicate as such, and license
+
+#         params:
+#             normaxis: 0
+#             future_mask: True
+
+#         pos:
+#             K: 0
+#             Q: +1
+
+#         x1:
+#             K: verb
+#             Q: pro det infinitive acc -nom -nom -nom
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: copula>predicate copula>licensed
+
+#     Hvhelp:
+#         docstring: Q K, where Q is a helper verb supporting main verb K
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             K: +1
+#             Q: 0
+
+#         x1:
+#             K: verb
+#             Q: helper -pro -det -noun -adjective -adverb
+
+#         x2:
+#             K: modal modal modal modal
+#             Q: -modal -modal -modal -modal
+
+#         x5: # everything else hits filler
+#             K: filler filler filler
+#             Q: filler pro det verb noun adjective
+
+#         int: verb>verb agentlack>agentlack
+#              themelack>themelack experiencerlack>experiencerlack
+#              perceptlack>perceptlack complementlack>complementlack
+#              goallack>goallack benefactivelack>benefactivelack
+#              itlack>itlack patientlack>patientlack
+#              eyeverb
+
+#     Hvantihelp:
+#         docstring: K Q, where K is a helper verb supporting main verb
+#                    Q
+
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             Q: +1
+#             K: 0
+
+#         x1:
+#             Q: verb
+#             K: helper
+
+#         x2:
+#             K: modal modal modal modal
+#             Q: -modal -modal -modal -modal
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: helper>licensed helper>-verb helper>-agentlack
+#              helper>-experiencerlack helper>-agentposs
+#              helper>-experiencerposs
+
+# FF2: # syntax layer 2 feed-forward
+#     # zero out negative shit
+#     mat1: agentlack>-agentlack agentposs>-agentposs
+#           experiencerlack>-experiencerlack
+#           experiencerposs>-experiencerposs
+
+#     mat2: agentlack>agentlack agentposs>agentposs
+#           experiencerlack>experiencerlack
+#           experiencerposs>experiencerposs
+
+# SA3: # syntax layer 3 self-attention
+#     H0:
+#         docstring: expletive subject wipes out itlack
+#         pos:
+#             Q: +1 +2
+#             K: 0
+
+#         x1:
+#             K: expletive
+#             Q: itlack
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: expletive>-itlack expletive>licensed
+
+# #SA3
+#     H1:
+#         docstring: subject wipes out agentlacks
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             Q: +1
+#             K: 0
+
+#         x1:
+#             K: pro det -acc -acc -acc -acc nom -reflexive -reflexive
+#             Q: agentlack agentposs
+
+#         x2:
+#             K: sg -pl massnoun 3rd -1st -1st -1st -2nd -2nd -2nd
+#             Q: 3rdsg
+
+#         x3:
+#             K: 1st 2nd pl -sg
+#             Q: plain
+
+#         int: pro>-agentlack det>-agentlack pro>-agentposs
+#              det>-agentposs
+#              pro>licensed det>licensed
+
+# #SA3
+#     H2:
+#         docstring: subject wipes out experiencerlacks
+#         params:
+#             normaxis: 0 # snipermode
+
+#         pos:
+#             Q: +1
+#             K: 0
+
+#         x1:
+#             K: pro det -acc -acc -acc -acc nom -gen -gen -reflexive
+#             Q: experiencerlack experiencerposs
+
+#         x2:
+#             K: sg massnoun 3rd -1st -1st -1st -2nd -2nd -2nd nom -gen -acc
+#             Q: 3rdsg
+
+#         x3:
+#             K: 1st 2nd pl -sg nom -gen -gen -gen -acc
+#             Q: plain
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: pro>-experiencerlack det>-experiencerlack
+#              pro>-experiencerposs det>-experiencerposs
+#              pro>licensed det>licensed
+
+# #SA3
+#     Hsubj:
+#         docstring: mark the subject as agent/experiencer
+#         params:
+#             normaxis: 0
+#             past_mask: True
+
+#         pos:
+#             K: +1
+#             Q: 0
+
+#         x1:
+#             K: agentlack experiencerlack itlack agentposs experiencerposs
+#             Q: pro det -gen -gen -gen -gen -gen -acc -acc -acc -acc
+#                -acc nom -late -cognate -cognate -cognate
+#                -patient -percept -theme
+#                -patient -percept -theme
+#                -patient -percept -theme
+#                -patient -percept -theme
+#                -patient -percept -theme
+#                -patient -percept -theme
+#                -patient -percept -theme
+
+#         x2:
+#             Q: sg 3rd -1st -1st -1st -2nd -2nd -2nd -late nom -gen -gen
+#             K: 3rdsg
+
+#         x3:
+#             Q: 1st  2nd pl -sg -late nom -gen -gen
+#             K: plain
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler noun adjective
+
+#         int: agentlack>agent agentlack>licensed agentlack>subject
+#              agentposs>agent agentposs>licensed agentposs>subject
+#              copula>licensed copula>subject
+#              experiencerlack>experiencer experiencerlack>licensed
+#              experiencerlack>subject experiencerposs>experiencer
+#              experiencerposs>licensed experiencerposs>subject
+#              itlack>licensed itlack>subject
+
+# #SA3
+#     H20:
+#         docstring: adverb(Q) must go after dirobject(K) or before
+#                    verb, so mark it as weird if it's not preverb but
+#                    is before dirobject
+
+#         params:
+#             past_mask: True
+
+#         pos:
+#             Q: 0
+#             K: +1
+
+#         x1:
+#             Q: adverb -preverb -preverb
+#             K: dirobject
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: dirobject>weird
+
+# FF3: # syntax layer 3 feed-forward
+#     imperative:
+#         x30: agentlack | experiencerlack
+#         x29: -preterite | -3rdsg
+
+#     mat1: reflexive>reflexive
+
+#     mat2: reflexive>-reflic
+
+# SA4: # syntax layer 4 self-attention
+#     H3:
+#         docstring: (some) pronouns coreference
+#         pos:
+#             K: 0
+#             Q: +2
+#         x2:
+#             K: 1st
+#             Q: 1st
+#         x3:
+#             K: 2nd
+#             Q: 2nd
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: pro>reflexivelack
+
+#     H10:
+#         docstring: check agreement between subject(K) and predicate(Q)
+#         pos:
+#             Q: 0
+#             K: +2
+
+#         x1:
+#             Q: predicate
+#             K: subject
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb adjective
+
+#         int: sg>sgcheck pl>plcheck
+
+#     H11:
+#         docstring: check that we do not have a (non-2nd) subject(Q)
+#                    and an imperative(K)
+
+#         pos:
+#             Q: 0
+#             K: +2
+
+#         x1:
+#             K: imperative
+#             Q: subject -2nd -2nd -2nd -2nd
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: imperative>weird
+
+#     Homega:
+#         docstring: reflexive Q demands an antecedent K
+#         params:
+#             future_mask: True
+
+#         pos:
+#             K: 0
+#             Q: +2
+
+#         x1:
+#             K: pro det
+#             Q: reflexive
+
+#         x2:
+#             K: 3rd
+#             Q: 3rd
+
+#         x3:
+#             K: 2nd
+#             Q: 2nd
+
+#         x4:
+#             K: 1st
+#             Q: 1st
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: pro>reflic det>reflic
+
+#     Homegaimp:
+#         docstring: reflexive Q demands an antecedent K, which is
+#                    understood 'you' in imperative sentence
+
+#         params:
+#             future_mask: True
+
+#         pos:
+#             K: 0
+#             Q: +1
+
+#         x1:
+#             K: imperative
+#             Q: 2nd
+
+#         x5: # everything else hits filler
+#             K: filler
+#             Q: filler verb noun adjective
+
+#         int: imperative>reflic
+
+# FF4: # syntax layer 4 feed-forward
+#     checked:
+#         x1: sgcheck & sg
+#         x2: plcheck & pl
+
+#     mat1: imperative>imperative
+
+#     mat2: imperative>licensed
+
+#     bias2: -checked
+
+# SA5: ''
+
+# FF5: # syntax layer 5 feed-forward
+#     weird:
+#         x1: themelack | complementlack | patientlack | itlack
+#         x2: theme & agent
+#         x3: agent & patient
+#         x4: -licensed & prep
+#         x5: -licensed & noun
+#         x6: -licensed & pro
+#         x7: -licensed & helper
+#         x8: -licensed & det
+#         x9: acc & subject
+#         x10: reflexive & -reflic
+#         x11: -checked & sgcheck
+#         x12: -checked & plcheck
+#         x13: -licensed & neg
+#         x14: nplack & prep
+
+#         x15: reflexivelack & 1st
+#         x16: reflexivelack & 2nd
+
+#         x17: -licensed & verb
+
+examples:
+    - she will eat a very small red apple .
+`,
+               id: "figure-grammaticality",
+               topLevel: true,
+               document: document,
+               container: initTagGrammaticality});
+      });
 
     </script>
 
 
 
     <a class="marker" href="#section-6" id="section-6"><span>6</span></a>
-    <h2>Translation Transformer</h2>
+    <h2>Seq2Seq Transformer for Translation</h2>
 
     <p>In this section, we show a Transformer programmed to translate
       English to French. This network is solving a toy version of the
@@ -1261,25 +2975,11 @@ examples:
 `,
                id: "figure-translation",
                topLevel: true,
-               document: document,
+               document: '',
                container: initTagTranslation});
       });
 
     </script>
-
-
-
-    <a class="marker" href="#section-9" id="section-9"><span>9</span></a>
-    <h2>Unused Stuff</h2>
-    <p>As an example, consider the problem of classifying sentences
-      as being sensible (e.g., "He saw the dog") or anomalous (e.g.,
-      "The apple saw the dog"). There are many ways for a sentence to be
-      anomalous, of course, and we cannot identify them all with a
-      single feed-forward layer. So here we will limit ourselves to a
-      layer that can identify what is anomalous about the sentence "The
-      apple saw the dog", given that preceding layers have already done
-      the work of analyzing the syntactic structure of the sentence.
-    </p>
 
 
 
