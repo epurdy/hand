@@ -1,6 +1,8 @@
 # Programmable Transformers
 
-## To read distill article
+This repository is not very well-organized, because it has mostly been private up till now. Probably the best entry-point is to read the distill.pub-style article I have written.
+
+## To read distill-style article
 - Install npm.
 - `cd distill`
 - `npm install`
